@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buku Nota — Catatan Transaksi Proyek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#1c1a16;
+    --paper:#f4f1e9;
+    --panel:#ffffff;
+    --line:#d9d3c3;
+    --teal:#1c4b4d;
+    --teal-dim:#3d6b6c;
+    --sand:#c98a3e;
+    --sand-dim:#e7c290;
+    --ok:#4c7a5d;
+    --warn:#b5502f;
+    --muted:#7a7364;
+    --radius:2px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    line-height:1.5;
+  }
+  .app{
+    display:grid;
+    grid-template-columns:260px 1fr;
+    min-height:100vh;
+  }
+  @media (max-width:860px){
+    .app{grid-template-columns:1fr;}
+    .sidebar{position:static;border-right:none;border-bottom:1px solid var(--line);}
+  }
+  .sidebar{
+    background:var(--teal);
+    color:#eae5d8;
+    padding:24px 20px;
+    position:sticky;
+    top:0;
+    height:100vh;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+  }
+  @media (max-width:860px){ .sidebar{height:auto;} }
+  .brand{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:20px;
+    letter-spacing:0.2px;
+    color:#fff;
+    margin:0 0 2px 0;
+  }
+  .brand-sub{
+    font-size:12px;
+    color:#b9cfcc;
+    margin-bottom:28px;
+  }
+  .nav-label{
+    font-size:11px;
+    color:#9fc0bd;
+    margin:22px 0 8px 0;
+    letter-spacing:0.4px;
+  }
+  .project-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;}
+  .project-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:9px 10px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    color:#dfe6df;
+    border-left:2px solid transparent;
+  }
+  .project-item:hover{background:rgba(255,255,255,0.06);}
+  .project-item.active{
+    background:rgba(255,255,255,0.1);
+    border-left:2px solid var(--sand);
+    color:#fff;
+    font-weight:500;
+  }
+  .project-item .del-btn{
+    opacity:0;
+    background:none;border:none;color:#e7c290;cursor:pointer;font-size:14px;padding:0 2px;
+  }
+  .project-item:hover .del-btn{opacity:0.8;}
+  .add-project{
+    margin-top:10px;
+    background:transparent;
+    border:1px dashed rgba(255,255,255,0.3);
+    color:#cfe0dd;
+    padding:8px 10px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    font-size:13px;
+    text-align:left;
+    font-family:inherit;
+  }
+  .add-project:hover{border-color:var(--sand);color:#fff;}
+  .sidebar-foot{
+    margin-top:auto;
+    padding-top:20px;
+    font-size:11px;
+    color:#8fada9;
+    border-top:1px solid rgba(255,255,255,0.12);
+  }
+  .main{padding:28px 32px 60px;max-width:1080px;}
+  @media (max-width:860px){ .main{padding:20px 16px 48px;} }
+
+  .titleblock{
+    border:1px solid var(--ink);
+    background:var(--panel);
+    padding:16px 20px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:10px;
+    margin-bottom:28px;
+  }
+  .titleblock h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:19px;
+    margin:0 0 4px 0;
+    font-weight:600;
+  }
+  .titleblock .meta-row{
+    display:flex;
+    gap:22px;
+    flex-wrap:wrap;
+    font-size:12px;
+    color:var(--muted);
+    margin-top:10px;
+  }
+  .titleblock .meta-row span b{color:var(--ink);font-weight:600;}
+  .titleblock .stamp{
+    align-self:flex-start;
+    font-size:11px;
+    color:var(--muted);
+    text-align:right;
+    white-space:nowrap;
+  }
+
+  .tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--line);}
+  .tab-btn{
+    font-family:'Space Grotesk',sans-serif;
+    background:none;border:none;
+    padding:10px 16px;
+    font-size:13px;
+    color:var(--muted);
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    margin-bottom:-1px;
+  }
+  .tab-btn.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:600;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:20px;
+    margin-bottom:20px;
+  }
+  .card h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:15px;
+    margin:0 0 16px 0;
+    font-weight:600;
+  }
+  .form-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  .form-grid .full{grid-column:1/-1;}
+  @media (max-width:600px){ .form-grid{grid-template-columns:1fr;} }
+  label{
+    display:block;
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:5px;
+  }
+  input,select,textarea{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:#fdfcf9;
+    color:var(--ink);
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal-dim);}
+  textarea{resize:vertical;min-height:60px;}
+  .btn{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    padding:10px 18px;
+    border-radius:var(--radius);
+    border:1px solid var(--teal);
+    background:var(--teal);
+    color:#fff;
+    cursor:pointer;
+  }
+  .btn:hover{background:var(--teal-dim);}
+  .btn.secondary{
+    background:transparent;
+    color:var(--teal);
+  }
+  .btn.secondary:hover{background:rgba(28,75,77,0.06);}
+  .btn.small{padding:6px 12px;font-size:12px;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  .filters{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;}
+  .filters .field{min-width:150px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);}
+  th{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:11px;
+    color:var(--muted);
+    font-weight:600;
+    letter-spacing:0.2px;
+  }
+  td.amount, th.amount{text-align:right;font-variant-numeric:tabular-nums;}
+  tr:hover td{background:#faf8f2;}
+  .badge{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:10px;
+    font-size:11px;
+    font-weight:600;
+  }
+  .badge.lunas{background:#e2ede4;color:var(--ok);}
+  .badge.belum{background:#f4e0d8;color:var(--warn);}
+  .badge.dp{background:#fbeed8;color:var(--sand);}
+  .row-actions{display:flex;gap:6px;}
+  .icon-btn{
+    background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 4px;
+  }
+  .icon-btn:hover{color:var(--teal);}
+  .empty{color:var(--muted);font-size:13px;padding:20px 0;text-align:center;}
+
+  .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+  @media (max-width:700px){ .summary-grid{grid-template-columns:1fr;} }
+  .stat{border:1px solid var(--line);background:var(--panel);padding:16px;}
+  .stat .label{font-size:11px;color:var(--muted);margin-bottom:6px;}
+  .stat .value{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;color:var(--teal);}
+  .stat .value.warn{color:var(--warn);}
+
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .bar-label{width:130px;font-size:12px;color:var(--ink);flex-shrink:0;}
+  .bar-track{flex:1;background:#efeade;height:14px;position:relative;}
+  .bar-fill{background:var(--teal);height:100%;}
+  .bar-value{width:110px;text-align:right;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;flex-shrink:0;}
+
+  .toolbar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-bottom:16px;}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(28,26,22,0.45);
+    display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
+  }
+  .modal{background:var(--panel);border:1px solid var(--ink);max-width:420px;width:100%;padding:22px;}
+  .modal h3{font-family:'Space Grotesk',sans-serif;margin:0 0 16px 0;font-size:16px;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+
+  .toast{
+    position:fixed;bottom:20px;right:20px;
+    background:var(--ink);color:#fdfcf9;
+    padding:10px 16px;font-size:13px;
+    border-radius:var(--radius);
+    opacity:0;transform:translateY(6px);
+    transition:opacity 0.2s, transform 0.2s;
+    z-index:60;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<div id="authGate" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f1e9;padding:20px;">
+  <div style="max-width:360px;width:100%;background:#fff;border:1px solid #1c1a16;padding:28px;">
+    <p style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;margin:0 0 4px 0;">Buku Nota</p>
+    <p style="font-size:13px;color:#7a7364;margin:0 0 20px 0;">Masuk pakai email untuk mengakses catatan transaksi kamu.</p>
+    <div id="authFormWrap">
+      <label style="display:block;font-size:12px;color:#7a7364;margin-bottom:5px;">Email</label>
+      <input type="email" id="auth-email" placeholder="emailkamu@contoh.com" style="width:100%;padding:9px 10px;border:1px solid #d9d3c3;margin-bottom:12px;font-family:'Inter',sans-serif;font-size:14px;">
+      <button id="sendMagicLinkBtn" style="width:100%;background:#1c4b4d;color:#fff;border:1px solid #1c4b4d;padding:10px;font-family:'Space Grotesk',sans-serif;font-weight:600;cursor:pointer;">Kirim link login</button>
+      <p id="authMsg" style="font-size:12px;color:#7a7364;margin-top:12px;"></p>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="appRoot" style="display:none;">
+  <div class="sidebar">
+    <div>
+      <p class="brand">Buku Nota</p>
+      <p class="brand-sub">Catatan transaksi proyek kolam</p>
+    </div>
+    <p class="nav-label">PROYEK</p>
+    <ul class="project-list" id="projectList"></ul>
+    <button class="add-project" id="addProjectBtn">+ Tambah proyek</button>
+    <div class="sidebar-foot">
+      <div id="totalProjectsFoot">0 proyek tersimpan</div>
+      <div id="userEmailLabel" style="margin-top:8px;font-size:11px;color:#cfe0dd;word-break:break-all;"></div>
+      <button id="logoutBtn" style="margin-top:8px;background:none;border:1px solid rgba(255,255,255,0.3);color:#eae5d8;padding:6px 10px;font-size:11px;cursor:pointer;">Keluar</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="titleblock">
+      <div>
+        <h1 id="activeProjectName">Belum ada proyek</h1>
+        <div class="meta-row" id="activeProjectMeta"></div>
+      </div>
+      <div class="stamp">
+        <div id="todayDate"></div>
+        <div>Buku Nota v1</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="input">Input Transaksi</button>
+      <button class="tab-btn" data-tab="daftar">Daftar Transaksi</button>
+      <button class="tab-btn" data-tab="ringkasan">Ringkasan &amp; Laporan</button>
+    </div>
+
+    <div id="noProjectMsg" class="card" style="display:none;">
+      <p style="margin:0;color:var(--muted);">Tambahkan proyek dulu di sebelah kiri sebelum mulai mencatat transaksi.</p>
+    </div>
+
+    <div id="tabContent">
+      <!-- INPUT -->
+      <div class="tab-panel active" data-panel="input">
+        <div class="card">
+          <h2 id="formTitle">Catat transaksi baru</h2>
+          <div class="form-grid">
+            <div>
+              <label for="f-date">Tanggal</label>
+              <input type="date" id="f-date">
+            </div>
+            <div>
+              <label for="f-category">Kategori</label>
+              <select id="f-category">
+                <option>Material</option>
+                <option>Alat / Sewa Alat</option>
+                <option>Tenaga Kerja</option>
+                <option>Transport</option>
+                <option>Lain-lain</option>
+              </select>
+            </div>
+            <div>
+              <label for="f-vendor">Vendor / Toko</label>
+              <input type="text" id="f-vendor" placeholder="mis. Toko Bangunan Sinar Jaya">
+            </div>
+            <div>
+              <label for="f-amount">Jumlah (Rp)</label>
+              <input type="number" id="f-amount" placeholder="0" min="0">
+            </div>
+            <div class="full">
+              <label for="f-desc">Deskripsi barang / item</label>
+              <input type="text" id="f-desc" placeholder="mis. Semen 10 sak, pipa PVC 2 inch">
+            </div>
+            <div>
+              <label for="f-status">Status pembayaran</label>
+              <select id="f-status">
+                <option>Lunas</option>
+                <option>Belum Lunas</option>
+                <option>DP</option>
+              </select>
+            </div>
+            <div>
+              <label for="f-noref">No. Nota / Ref (opsional)</label>
+              <input type="text" id="f-noref" placeholder="mis. NT-0231">
+            </div>
+            <div class="full">
+              <label for="f-note">Catatan tambahan (opsional)</label>
+              <textarea id="f-note" placeholder="Catatan bebas..."></textarea>
+            </div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:10px;">
+            <button class="btn" id="saveTransactionBtn">Simpan transaksi</button>
+            <button class="btn secondary" id="cancelEditBtn" style="display:none;">Batal edit</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DAFTAR -->
+      <div class="tab-panel" data-panel="daftar">
+        <div class="card">
+          <div class="filters">
+            <div class="field">
+              <label for="filter-month">Bulan</label>
+              <input type="month" id="filter-month">
+            </div>
+            <div class="field">
+              <label for="filter-category">Kategori</label>
+              <select id="filter-category">
+                <option value="">Semua kategori</option>
+                <option>Material</option>
+                <option>Alat / Sewa Alat</option>
+                <option>Tenaga Kerja</option>
+                <option>Transport</option>
+                <option>Lain-lain</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="filter-status">Status</label>
+              <select id="filter-status">
+                <option value="">Semua status</option>
+                <option>Lunas</option>
+                <option>Belum Lunas</option>
+                <option>DP</option>
+              </select>
+            </div>
+            <button class="btn secondary small" id="clearFilterBtn">Reset filter</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tanggal</th><th>Kategori</th><th>Vendor</th><th>Deskripsi</th>
+                  <th class="amount">Jumlah</th><th>Status</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="txTableBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="txEmptyMsg" style="display:none;">Belum ada transaksi yang cocok dengan filter.</div>
+        </div>
+      </div>
+
+      <!-- RINGKASAN -->
+      <div class="tab-panel" data-panel="ringkasan">
+        <div class="card">
+          <div class="filters">
+            <div class="field">
+              <label for="summary-month">Periode (kosongkan = semua)</label>
+              <input type="month" id="summary-month">
+            </div>
+            <button class="btn secondary small" id="clearSummaryFilterBtn">Semua periode</button>
+          </div>
+          <div class="summary-grid">
+            <div class="stat">
+              <div class="label">Total transaksi</div>
+              <div class="value" id="stat-total">Rp 0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Jumlah nota</div>
+              <div class="value" id="stat-count">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Belum lunas</div>
+              <div class="value warn" id="stat-unpaid">Rp 0</div>
+            </div>
+          </div>
+          <h2>Per kategori</h2>
+          <div id="categoryBars"></div>
+          <h2 style="margin-top:24px;">Per vendor</h2>
+          <div id="vendorBars"></div>
+        </div>
+        <div class="toolbar">
+          <button class="btn secondary" id="exportSummaryPdf">Buka Laporan Ringkasan (PDF)</button>
+          <button class="btn secondary" id="exportListPdf">Buka Daftar Transaksi (PDF)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ====== ISI DUA BARIS INI DENGAN DATA DARI SUPABASE PROJECT KAMU ======
+const SUPABASE_URL = 'GANTI_DENGAN_SUPABASE_URL_KAMU';
+const SUPABASE_ANON_KEY = 'GANTI_DENGAN_SUPABASE_ANON_KEY_KAMU';
+// =======================================================================
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser = null;
+
+let state = { projects: [], transactions: [] };
+let activeProjectId = null;
+let editingTxId = null;
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function rupiah(n){ return 'Rp ' + Math.round(n).toLocaleString('id-ID'); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._h);
+  showToast._h = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+async function loadData(){
+  const [{ data: projects, error: projErr }, { data: transactions, error: txErr }] = await Promise.all([
+    sb.from('projects').select('*').order('created_at', { ascending: true }),
+    sb.from('transactions').select('*').order('date', { ascending: false })
+  ]);
+  if(projErr || txErr){
+    console.error(projErr || txErr);
+    showToast('Gagal memuat data dari Supabase.');
+    return;
+  }
+  state.projects = (projects || []).map(p => ({
+    id: p.id, name: p.name, client: p.client || '', location: p.location || '', createdAt: p.created_at
+  }));
+  state.transactions = (transactions || []).map(t => ({
+    id: t.id, projectId: t.project_id, date: t.date, category: t.category, vendor: t.vendor,
+    amount: Number(t.amount), description: t.description, status: t.status, ref: t.ref || '', note: t.note || '',
+    createdAt: t.created_at
+  }));
+  if(state.projects.length && !activeProjectId){
+    activeProjectId = state.projects[0].id;
+  }
+}
+
+function renderProjectList(){
+  const list = document.getElementById('projectList');
+  list.innerHTML = '';
+  state.projects.forEach(p=>{
+    const li = document.createElement('li');
+    li.className = 'project-item' + (p.id===activeProjectId ? ' active':'');
+    li.innerHTML = `<span>${escapeHtml(p.name)}</span><button class="del-btn" title="Hapus proyek">✕</button>`;
+    li.querySelector('span').addEventListener('click', ()=>{ activeProjectId = p.id; renderAll(); });
+    li.querySelector('.del-btn').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openConfirmDeleteProject(p);
+    });
+    list.appendChild(li);
+  });
+  document.getElementById('totalProjectsFoot').textContent = state.projects.length + ' proyek tersimpan';
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
+function getActiveProject(){
+  return state.projects.find(p=>p.id===activeProjectId);
+}
+
+function renderTitleBlock(){
+  const proj = getActiveProject();
+  document.getElementById('todayDate').textContent = new Date().toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
+  const noProj = document.getElementById('noProjectMsg');
+  const tabContent = document.getElementById('tabContent');
+  if(!proj){
+    document.getElementById('activeProjectName').textContent = 'Belum ada proyek';
+    document.getElementById('activeProjectMeta').innerHTML = '';
+    noProj.style.display = 'block';
+    tabContent.style.display = 'none';
+    return;
+  }
+  noProj.style.display = 'none';
+  tabContent.style.display = 'block';
+  document.getElementById('activeProjectName').textContent = proj.name;
+  const bits = [];
+  if(proj.client) bits.push(`<span>Klien: <b>${escapeHtml(proj.client)}</b></span>`);
+  if(proj.location) bits.push(`<span>Lokasi: <b>${escapeHtml(proj.location)}</b></span>`);
+  const count = state.transactions.filter(t=>t.projectId===proj.id).length;
+  bits.push(`<span>Total nota: <b>${count}</b></span>`);
+  document.getElementById('activeProjectMeta').innerHTML = bits.join('');
+}
+
+function getProjectTransactions(){
+  return state.transactions.filter(t=>t.projectId===activeProjectId);
+}
+
+function applyListFilters(list){
+  const month = document.getElementById('filter-month').value;
+  const cat = document.getElementById('filter-category').value;
+  const status = document.getElementById('filter-status').value;
+  return list.filter(t=>{
+    if(month && t.date.slice(0,7) !== month) return false;
+    if(cat && t.category !== cat) return false;
+    if(status && t.status !== status) return false;
+    return true;
+  });
+}
+
+function renderTable(){
+  const body = document.getElementById('txTableBody');
+  body.innerHTML = '';
+  let list = getProjectTransactions().slice().sort((a,b)=> b.date.localeCompare(a.date));
+  list = applyListFilters(list);
+  document.getElementById('txEmptyMsg').style.display = list.length ? 'none':'block';
+  list.forEach(t=>{
+    const tr = document.createElement('tr');
+    const badgeClass = t.status === 'Lunas' ? 'lunas' : (t.status === 'DP' ? 'dp' : 'belum');
+    tr.innerHTML = `
+      <td>${formatDateShort(t.date)}</td>
+      <td>${escapeHtml(t.category)}</td>
+      <td>${escapeHtml(t.vendor)}</td>
+      <td>${escapeHtml(t.description)}</td>
+      <td class="amount">${rupiah(t.amount)}</td>
+      <td><span class="badge ${badgeClass}">${escapeHtml(t.status)}</span></td>
+      <td class="row-actions">
+        <button class="icon-btn" data-action="pdf" title="Buka bukti PDF">📄</button>
+        <button class="icon-btn" data-action="edit" title="Edit">✎</button>
+        <button class="icon-btn" data-action="del" title="Hapus">✕</button>
+      </td>
+    `;
+    tr.querySelector('[data-action="pdf"]').addEventListener('click', ()=>exportReceiptPdf(t));
+    tr.querySelector('[data-action="edit"]').addEventListener('click', ()=>startEditTransaction(t));
+    tr.querySelector('[data-action="del"]').addEventListener('click', ()=>openConfirmDeleteTx(t));
+    body.appendChild(tr);
+  });
+}
+
+function formatDateShort(iso){
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function startEditTransaction(t){
+  editingTxId = t.id;
+  document.getElementById('f-date').value = t.date;
+  document.getElementById('f-category').value = t.category;
+  document.getElementById('f-vendor').value = t.vendor;
+  document.getElementById('f-amount').value = t.amount;
+  document.getElementById('f-desc').value = t.description;
+  document.getElementById('f-status').value = t.status;
+  document.getElementById('f-noref').value = t.ref || '';
+  document.getElementById('f-note').value = t.note || '';
+  document.getElementById('formTitle').textContent = 'Edit transaksi';
+  document.getElementById('cancelEditBtn').style.display = 'inline-block';
+  document.querySelector('.tab-btn[data-tab="input"]').click();
+}
+
+function resetForm(){
+  editingTxId = null;
+  document.getElementById('f-date').value = todayISO();
+  document.getElementById('f-category').value = 'Material';
+  document.getElementById('f-vendor').value = '';
+  document.getElementById('f-amount').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-status').value = 'Lunas';
+  document.getElementById('f-noref').value = '';
+  document.getElementById('f-note').value = '';
+  document.getElementById('formTitle').textContent = 'Catat transaksi baru';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+}
+
+async function handleSaveTransaction(){
+  if(!activeProjectId){ showToast('Pilih atau tambah proyek dulu.'); return; }
+  const date = document.getElementById('f-date').value || todayISO();
+  const vendor = document.getElementById('f-vendor').value.trim();
+  const amount = parseFloat(document.getElementById('f-amount').value);
+  const description = document.getElementById('f-desc').value.trim();
+  if(!vendor || !description || !amount || amount <= 0){
+    showToast('Lengkapi vendor, deskripsi, dan jumlah dulu ya.');
+    return;
+  }
+  const row = {
+    project_id: activeProjectId,
+    user_id: currentUser.id,
+    date,
+    category: document.getElementById('f-category').value,
+    vendor,
+    amount,
+    description,
+    status: document.getElementById('f-status').value,
+    ref: document.getElementById('f-noref').value.trim(),
+    note: document.getElementById('f-note').value.trim()
+  };
+  let error;
+  if(editingTxId){
+    ({ error } = await sb.from('transactions').update(row).eq('id', editingTxId));
+  } else {
+    ({ error } = await sb.from('transactions').insert(row));
+  }
+  if(error){
+    console.error(error);
+    showToast('Gagal menyimpan transaksi.');
+    return;
+  }
+  showToast(editingTxId ? 'Transaksi diperbarui.' : 'Transaksi disimpan.');
+  resetForm();
+  await loadData();
+  renderAll();
+}
+
+function openConfirmDeleteTx(t){
+  openModal({
+    title: 'Hapus transaksi ini?',
+    body: `${escapeHtml(t.description)} — ${rupiah(t.amount)}`,
+    confirmLabel: 'Hapus',
+    onConfirm: async ()=>{
+      const { error } = await sb.from('transactions').delete().eq('id', t.id);
+      if(error){ console.error(error); showToast('Gagal menghapus transaksi.'); return; }
+      await loadData();
+      renderAll();
+      showToast('Transaksi dihapus.');
+    }
+  });
+}
+
+function openConfirmDeleteProject(p){
+  openModal({
+    title: `Hapus proyek "${escapeHtml(p.name)}"?`,
+    body: 'Semua transaksi di proyek ini akan ikut terhapus.',
+    confirmLabel: 'Hapus proyek',
+    onConfirm: async ()=>{
+      const { error } = await sb.from('projects').delete().eq('id', p.id);
+      if(error){ console.error(error); showToast('Gagal menghapus proyek.'); return; }
+      if(activeProjectId === p.id){ activeProjectId = null; }
+      await loadData();
+      if(!activeProjectId && state.projects.length) activeProjectId = state.projects[0].id;
+      renderAll();
+      showToast('Proyek dihapus.');
+    }
+  });
+}
+
+function openModal({title, body, confirmLabel, onConfirm, formHtml, onSubmit}){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal">
+        <h3>${title}</h3>
+        ${formHtml ? formHtml : `<p style="margin:0;color:var(--muted);">${body||''}</p>`}
+        <div class="modal-actions">
+          <button class="btn secondary" id="modalCancel">Batal</button>
+          <button class="btn" id="modalConfirm">${confirmLabel || 'OK'}</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalCancel').addEventListener('click', ()=>{ root.innerHTML=''; });
+  document.getElementById('modalConfirm').addEventListener('click', async ()=>{
+    if(onSubmit){
+      const ok = await onSubmit();
+      if(ok === false) return;
+    } else if(onConfirm){
+      await onConfirm();
+    }
+    root.innerHTML = '';
+  });
+}
+
+function openAddProjectModal(){
+  openModal({
+    title: 'Tambah proyek baru',
+    confirmLabel: 'Simpan proyek',
+    formHtml: `
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label>Nama proyek</label>
+          <input type="text" id="np-name" placeholder="mis. Villa Kayu Putih - Kolam Renang">
+        </div>
+        <div>
+          <label>Klien (opsional)</label>
+          <input type="text" id="np-client" placeholder="mis. Pak Dody">
+        </div>
+        <div>
+          <label>Lokasi (opsional)</label>
+          <input type="text" id="np-location" placeholder="mis. Padang Sambian, Denpasar">
+        </div>
+      </div>
+    `,
+    onSubmit: async ()=>{
+      const name = document.getElementById('np-name').value.trim();
+      if(!name){ showToast('Nama proyek wajib diisi.'); return false; }
+      const { data, error } = await sb.from('projects').insert({
+        user_id: currentUser.id,
+        name,
+        client: document.getElementById('np-client').value.trim(),
+        location: document.getElementById('np-location').value.trim()
+      }).select().single();
+      if(error){ console.error(error); showToast('Gagal menambah proyek.'); return false; }
+      activeProjectId = data.id;
+      await loadData();
+      renderAll();
+      showToast('Proyek ditambahkan.');
+    }
+  });
+}
+
+function renderSummary(){
+  const month = document.getElementById('summary-month').value;
+  let list = getProjectTransactions();
+  if(month) list = list.filter(t=>t.date.slice(0,7)===month);
+
+  const total = list.reduce((s,t)=>s+t.amount,0);
+  const unpaid = list.filter(t=>t.status!=='Lunas').reduce((s,t)=>s+t.amount,0);
+  document.getElementById('stat-total').textContent = rupiah(total);
+  document.getElementById('stat-count').textContent = list.length;
+  document.getElementById('stat-unpaid').textContent = rupiah(unpaid);
+
+  renderBarBreakdown('categoryBars', groupSum(list, 'category'), total);
+  renderBarBreakdown('vendorBars', groupSum(list, 'vendor'), total);
+}
+
+function groupSum(list, key){
+  const map = {};
+  list.forEach(t=>{ map[t[key]] = (map[t[key]]||0) + t.amount; });
+  return Object.entries(map).sort((a,b)=>b[1]-a[1]);
+}
+
+function renderBarBreakdown(containerId, entries, total){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  if(!entries.length){
+    el.innerHTML = '<p class="empty">Belum ada data.</p>';
+    return;
+  }
+  const max = Math.max(...entries.map(e=>e[1]));
+  entries.forEach(([label, val])=>{
+    const pct = max ? (val/max*100) : 0;
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div class="bar-label">${escapeHtml(label)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div class="bar-value">${rupiah(val)}</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function exportReceiptPdf(t){
+  const proj = state.projects.find(p=>p.id===t.projectId);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a5' });
+  const pageW = doc.internal.pageSize.getWidth();
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.text('BUKTI TRANSAKSI', pageW/2, 16, { align:'center' });
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.text(proj ? proj.name : '-', pageW/2, 22, { align:'center' });
+  doc.setDrawColor(150);
+  doc.line(12, 26, pageW-12, 26);
+
+  const rows = [
+    ['Tanggal', formatDateShort(t.date)],
+    ['Kategori', t.category],
+    ['Vendor / Toko', t.vendor],
+    ['Deskripsi', t.description],
+    ['Status', t.status],
+    ['No. Ref', t.ref || '-'],
+  ];
+  doc.autoTable({
+    startY: 32,
+    theme: 'plain',
+    styles: { fontSize: 10, cellPadding: 1.5 },
+    columnStyles: { 0: { fontStyle:'bold', cellWidth: 32 } },
+    body: rows,
+    margin: { left: 12, right: 12 }
+  });
+
+  let y = doc.lastAutoTable.finalY + 6;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(12);
+  doc.text('Jumlah: ' + rupiah(t.amount), 12, y);
+
+  if(t.note){
+    y += 10;
+    doc.setFont('helvetica','italic');
+    doc.setFontSize(9);
+    doc.text('Catatan: ' + t.note, 12, y, { maxWidth: pageW-24 });
+  }
+
+  doc.setFontSize(8);
+  doc.setTextColor(140);
+  doc.text('Dibuat: ' + new Date().toLocaleString('id-ID'), 12, doc.internal.pageSize.getHeight()-10);
+
+  openPdfSafely(doc, `bukti-${(t.vendor||'transaksi').replace(/\s+/g,'-').toLowerCase()}-${t.date}.pdf`);
+}
+
+function openPdfSafely(doc, filename){
+  try{
+    const blobUrl = doc.output('bloburl');
+    const win = window.open(blobUrl, '_blank');
+    if(!win){
+      // popup blocked — fall back to direct download attempt
+      doc.save(filename);
+    } else {
+      showToast('PDF dibuka di tab baru — simpan dari sana.');
+    }
+  }catch(e){
+    console.error(e);
+    try{ doc.save(filename); }catch(e2){ showToast('Gagal membuat PDF. Coba lagi.'); }
+  }
+}
+
+function exportListPdf(){
+  const proj = getActiveProject();
+  if(!proj){ showToast('Pilih proyek dulu.'); return; }
+  let list = getProjectTransactions().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  list = applyListFilters(list);
+  if(!list.length){ showToast('Tidak ada transaksi untuk diekspor.'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(14);
+  doc.text('DAFTAR TRANSAKSI', 14, 16);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10);
+  doc.text(proj.name, 14, 23);
+  if(proj.client) doc.text('Klien: ' + proj.client, 14, 28);
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text('Dibuat: ' + new Date().toLocaleString('id-ID'), pageW-14, 16, { align:'right' });
+
+  const body = list.map(t=>[
+    formatDateShort(t.date), t.category, t.vendor, t.description, rupiah(t.amount), t.status
+  ]);
+  const total = list.reduce((s,t)=>s+t.amount,0);
+
+  doc.autoTable({
+    startY: 34,
+    head: [['Tanggal','Kategori','Vendor','Deskripsi','Jumlah','Status']],
+    body,
+    styles: { fontSize: 8.5, cellPadding: 2 },
+    headStyles: { fillColor: [28,75,77] },
+    columnStyles: { 4: { halign:'right' } },
+    margin: { left: 14, right: 14 }
+  });
+
+  const y = doc.lastAutoTable.finalY + 8;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.text('TOTAL: ' + rupiah(total), pageW-14, y, { align:'right' });
+
+  openPdfSafely(doc, `daftar-transaksi-${proj.name.replace(/\s+/g,'-').toLowerCase()}.pdf`);
+}
+
+function exportSummaryPdf(){
+  const proj = getActiveProject();
+  if(!proj){ showToast('Pilih proyek dulu.'); return; }
+  const month = document.getElementById('summary-month').value;
+  let list = getProjectTransactions();
+  if(month) list = list.filter(t=>t.date.slice(0,7)===month);
+  if(!list.length){ showToast('Tidak ada data untuk periode ini.'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(14);
+  doc.text('LAPORAN RINGKASAN TRANSAKSI', 14, 16);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10);
+  doc.text(proj.name, 14, 23);
+  if(proj.client) doc.text('Klien: ' + proj.client, 14, 28);
+  doc.setFontSize(9);
+  doc.text('Periode: ' + (month ? formatMonthLabel(month) : 'Semua periode'), 14, 33);
+  doc.setTextColor(120);
+  doc.text('Dibuat: ' + new Date().toLocaleString('id-ID'), pageW-14, 16, { align:'right' });
+  doc.setTextColor(0);
+
+  const total = list.reduce((s,t)=>s+t.amount,0);
+  const unpaid = list.filter(t=>t.status!=='Lunas').reduce((s,t)=>s+t.amount,0);
+
+  doc.autoTable({
+    startY: 40,
+    theme: 'plain',
+    styles: { fontSize: 10, cellPadding: 1.5 },
+    columnStyles: { 0: { fontStyle:'bold', cellWidth: 50 } },
+    body: [
+      ['Total transaksi', rupiah(total)],
+      ['Jumlah nota', String(list.length)],
+      ['Belum lunas', rupiah(unpaid)],
+    ],
+    margin: { left: 14, right: 14 }
+  });
+
+  let y = doc.lastAutoTable.finalY + 8;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.text('Per Kategori', 14, y);
+  y += 4;
+  const catRows = groupSum(list,'category').map(([k,v])=>[k, rupiah(v)]);
+  doc.autoTable({
+    startY: y,
+    head: [['Kategori','Jumlah']],
+    body: catRows,
+    styles: { fontSize: 9, cellPadding: 2 },
+    headStyles: { fillColor: [28,75,77] },
+    columnStyles: { 1: { halign:'right' } },
+    margin: { left: 14, right: 14 }
+  });
+
+  y = doc.lastAutoTable.finalY + 8;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.text('Per Vendor', 14, y);
+  y += 4;
+  const vendRows = groupSum(list,'vendor').map(([k,v])=>[k, rupiah(v)]);
+  doc.autoTable({
+    startY: y,
+    head: [['Vendor','Jumlah']],
+    body: vendRows,
+    styles: { fontSize: 9, cellPadding: 2 },
+    headStyles: { fillColor: [28,75,77] },
+    columnStyles: { 1: { halign:'right' } },
+    margin: { left: 14, right: 14 }
+  });
+
+  openPdfSafely(doc, `ringkasan-${proj.name.replace(/\s+/g,'-').toLowerCase()}${month ? '-'+month : ''}.pdf`);
+}
+
+function formatMonthLabel(m){
+  const [y,mo] = m.split('-');
+  const d = new Date(parseInt(y), parseInt(mo)-1, 1);
+  return d.toLocaleDateString('id-ID', { month:'long', year:'numeric' });
+}
+
+function renderAll(){
+  renderProjectList();
+  renderTitleBlock();
+  renderTable();
+  renderSummary();
+}
+
+function setupTabs(){
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelector(`.tab-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
+    });
+  });
+}
+
+async function startApp(){
+  document.getElementById('authGate').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'grid';
+  document.getElementById('userEmailLabel').textContent = currentUser.email;
+  await loadData();
+  resetForm();
+  renderAll();
+}
+
+async function initAuth(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session && session.user){
+    currentUser = session.user;
+    await startApp();
+  }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if(session && session.user){
+      currentUser = session.user;
+      await startApp();
+    } else if(event === 'SIGNED_OUT'){
+      currentUser = null;
+      state = { projects: [], transactions: [] };
+      activeProjectId = null;
+      document.getElementById('appRoot').style.display = 'none';
+      document.getElementById('authGate').style.display = 'flex';
+    }
+  });
+
+  document.getElementById('sendMagicLinkBtn').addEventListener('click', async ()=>{
+    const email = document.getElementById('auth-email').value.trim();
+    const msg = document.getElementById('authMsg');
+    if(!email){ msg.textContent = 'Masukkan email dulu ya.'; return; }
+    msg.textContent = 'Mengirim link login...';
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.href }
+    });
+    if(error){
+      console.error(error);
+      msg.textContent = 'Gagal mengirim link. Coba lagi.';
+    } else {
+      msg.textContent = 'Link login sudah dikirim — cek email kamu (termasuk folder spam).';
+    }
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+    await sb.auth.signOut();
+  });
+}
+
+function setupAppEvents(){
+  setupTabs();
+  document.getElementById('addProjectBtn').addEventListener('click', openAddProjectModal);
+  document.getElementById('saveTransactionBtn').addEventListener('click', handleSaveTransaction);
+  document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
+  document.getElementById('filter-month').addEventListener('change', renderTable);
+  document.getElementById('filter-category').addEventListener('change', renderTable);
+  document.getElementById('filter-status').addEventListener('change', renderTable);
+  document.getElementById('clearFilterBtn').addEventListener('click', ()=>{
+    document.getElementById('filter-month').value='';
+    document.getElementById('filter-category').value='';
+    document.getElementById('filter-status').value='';
+    renderTable();
+  });
+  document.getElementById('summary-month').addEventListener('change', renderSummary);
+  document.getElementById('clearSummaryFilterBtn').addEventListener('click', ()=>{
+    document.getElementById('summary-month').value='';
+    renderSummary();
+  });
+  document.getElementById('exportSummaryPdf').addEventListener('click', exportSummaryPdf);
+  document.getElementById('exportListPdf').addEventListener('click', exportListPdf);
+}
+
+setupAppEvents();
+initAuth();
+</script>
+</body>
+
+</html>
