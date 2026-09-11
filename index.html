@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -117,7 +118,7 @@
     color:#8fada9;
     border-top:1px solid rgba(255,255,255,0.12);
   }
-  .main{padding:28px 32px 60px;max-width:1080px;}
+  .main{padding:28px 32px 60px;max-width:1120px;}
   @media (max-width:860px){ .main{padding:20px 16px 48px;} }
 
   .titleblock{
@@ -152,16 +153,17 @@
     white-space:nowrap;
   }
 
-  .tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--line);}
+  .tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
   .tab-btn{
     font-family:'Space Grotesk',sans-serif;
     background:none;border:none;
-    padding:10px 16px;
+    padding:10px 14px;
     font-size:13px;
     color:var(--muted);
     cursor:pointer;
     border-bottom:2px solid transparent;
     margin-bottom:-1px;
+    white-space:nowrap;
   }
   .tab-btn.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:600;}
   .tab-panel{display:none;}
@@ -179,6 +181,8 @@
     margin:0 0 16px 0;
     font-weight:600;
   }
+  .card h2.sub{margin-top:6px;}
+  .card p.hint{font-size:12px;color:var(--muted);margin:-10px 0 16px 0;}
   .form-grid{
     display:grid;
     grid-template-columns:1fr 1fr;
@@ -248,6 +252,9 @@
   .badge.lunas{background:#e2ede4;color:var(--ok);}
   .badge.belum{background:#f4e0d8;color:var(--warn);}
   .badge.dp{background:#fbeed8;color:var(--sand);}
+  .badge.masuk{background:#e2ede4;color:var(--ok);}
+  .badge.keluar{background:#f4e0d8;color:var(--warn);}
+  .badge.type{background:#e7e2d3;color:var(--ink);}
   .row-actions{display:flex;gap:6px;}
   .icon-btn{
     background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 4px;
@@ -255,12 +262,14 @@
   .icon-btn:hover{color:var(--teal);}
   .empty{color:var(--muted);font-size:13px;padding:20px 0;text-align:center;}
 
-  .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
-  @media (max-width:700px){ .summary-grid{grid-template-columns:1fr;} }
+  .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+  @media (max-width:900px){ .summary-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:520px){ .summary-grid{grid-template-columns:1fr;} }
   .stat{border:1px solid var(--line);background:var(--panel);padding:16px;}
   .stat .label{font-size:11px;color:var(--muted);margin-bottom:6px;}
-  .stat .value{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;color:var(--teal);}
+  .stat .value{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:600;color:var(--teal);}
   .stat .value.warn{color:var(--warn);}
+  .stat .value.ok{color:var(--ok);}
 
   .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
   .bar-label{width:130px;font-size:12px;color:var(--ink);flex-shrink:0;}
@@ -273,10 +282,16 @@
   .modal-overlay{
     position:fixed;inset:0;background:rgba(28,26,22,0.45);
     display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
+    overflow-y:auto;
   }
-  .modal{background:var(--panel);border:1px solid var(--ink);max-width:420px;width:100%;padding:22px;}
+  .modal{background:var(--panel);border:1px solid var(--ink);max-width:440px;width:100%;padding:22px;margin:auto;}
   .modal h3{font-family:'Space Grotesk',sans-serif;margin:0 0 16px 0;font-size:16px;}
   .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+  .radio-opt{display:flex;align-items:flex-start;gap:8px;padding:10px;border:1px solid var(--line);margin-bottom:8px;cursor:pointer;}
+  .radio-opt:hover{border-color:var(--teal-dim);}
+  .radio-opt input{width:auto;margin-top:3px;}
+  .radio-opt .opt-title{font-weight:600;font-size:13px;}
+  .radio-opt .opt-desc{font-size:12px;color:var(--muted);}
 
   .toast{
     position:fixed;bottom:20px;right:20px;
@@ -286,8 +301,12 @@
     opacity:0;transform:translateY(6px);
     transition:opacity 0.2s, transform 0.2s;
     z-index:60;
+    max-width:280px;
   }
   .toast.show{opacity:1;transform:translateY(0);}
+  .diff-pos{color:var(--ok);font-weight:600;}
+  .diff-neg{color:var(--warn);font-weight:600;}
+  .diff-zero{color:var(--muted);}
 </style>
 </head>
 <body>
@@ -329,153 +348,459 @@
       </div>
       <div class="stamp">
         <div id="todayDate"></div>
-        <div>Buku Nota v1</div>
+        <div>Buku Nota v2</div>
       </div>
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" data-tab="input">Input Transaksi</button>
-      <button class="tab-btn" data-tab="daftar">Daftar Transaksi</button>
-      <button class="tab-btn" data-tab="ringkasan">Ringkasan &amp; Laporan</button>
-    </div>
-
-    <div id="noProjectMsg" class="card" style="display:none;">
-      <p style="margin:0;color:var(--muted);">Tambahkan proyek dulu di sebelah kiri sebelum mulai mencatat transaksi.</p>
+      <button class="tab-btn active" data-tab="input">Transaksi</button>
+      <button class="tab-btn" data-tab="pengeluaran">Pengeluaran</button>
+      <button class="tab-btn" data-tab="ringkasan">Ringkasan Proyek</button>
+      <button class="tab-btn" data-tab="pettycash">Petty Cash</button>
+      <button class="tab-btn" data-tab="inventory">Inventory</button>
     </div>
 
     <div id="tabContent">
-      <!-- INPUT -->
+      <!-- TRANSAKSI -->
       <div class="tab-panel active" data-panel="input">
-        <div class="card">
-          <h2 id="formTitle">Catat transaksi baru</h2>
-          <div class="form-grid">
-            <div>
-              <label for="f-date">Tanggal</label>
-              <input type="date" id="f-date">
+        <div id="tx-noProjectMsg" class="card" style="display:none;">
+          <p style="margin:0;color:var(--muted);">Tambahkan proyek dulu di sebelah kiri sebelum mulai mencatat transaksi.</p>
+        </div>
+        <div id="tx-content">
+          <div class="card">
+            <h2 id="formTitle">Catat transaksi baru</h2>
+            <div class="form-grid">
+              <div>
+                <label for="f-date">Tanggal</label>
+                <input type="date" id="f-date">
+              </div>
+              <div>
+                <label for="f-category">Kategori</label>
+                <select id="f-category">
+                  <option>Material</option>
+                  <option>Alat / Sewa Alat</option>
+                  <option>Tenaga Kerja</option>
+                  <option>Transport</option>
+                  <option>Lain-lain</option>
+                </select>
+              </div>
+              <div>
+                <label for="f-vendor">Vendor / Toko</label>
+                <input type="text" id="f-vendor" placeholder="mis. Toko Bangunan Sinar Jaya">
+              </div>
+              <div>
+                <label for="f-amount">Jumlah (Rp)</label>
+                <input type="number" id="f-amount" placeholder="0" min="0">
+              </div>
+              <div class="full">
+                <label for="f-desc">Deskripsi barang / item</label>
+                <input type="text" id="f-desc" placeholder="mis. Semen 10 sak, pipa PVC 2 inch">
+              </div>
+              <div>
+                <label for="f-status">Status pembayaran</label>
+                <select id="f-status">
+                  <option>Lunas</option>
+                  <option>Belum Lunas</option>
+                  <option>DP</option>
+                </select>
+              </div>
+              <div>
+                <label for="f-noref">No. Nota / Ref (opsional)</label>
+                <input type="text" id="f-noref" placeholder="mis. NT-0231">
+              </div>
+              <div class="full">
+                <label for="f-note">Catatan tambahan (opsional)</label>
+                <textarea id="f-note" placeholder="Catatan bebas..."></textarea>
+              </div>
             </div>
-            <div>
-              <label for="f-category">Kategori</label>
-              <select id="f-category">
-                <option>Material</option>
-                <option>Alat / Sewa Alat</option>
-                <option>Tenaga Kerja</option>
-                <option>Transport</option>
-                <option>Lain-lain</option>
-              </select>
-            </div>
-            <div>
-              <label for="f-vendor">Vendor / Toko</label>
-              <input type="text" id="f-vendor" placeholder="mis. Toko Bangunan Sinar Jaya">
-            </div>
-            <div>
-              <label for="f-amount">Jumlah (Rp)</label>
-              <input type="number" id="f-amount" placeholder="0" min="0">
-            </div>
-            <div class="full">
-              <label for="f-desc">Deskripsi barang / item</label>
-              <input type="text" id="f-desc" placeholder="mis. Semen 10 sak, pipa PVC 2 inch">
-            </div>
-            <div>
-              <label for="f-status">Status pembayaran</label>
-              <select id="f-status">
-                <option>Lunas</option>
-                <option>Belum Lunas</option>
-                <option>DP</option>
-              </select>
-            </div>
-            <div>
-              <label for="f-noref">No. Nota / Ref (opsional)</label>
-              <input type="text" id="f-noref" placeholder="mis. NT-0231">
-            </div>
-            <div class="full">
-              <label for="f-note">Catatan tambahan (opsional)</label>
-              <textarea id="f-note" placeholder="Catatan bebas..."></textarea>
+            <div style="margin-top:16px;display:flex;gap:10px;">
+              <button class="btn" id="saveTransactionBtn">Simpan transaksi</button>
+              <button class="btn secondary" id="cancelEditBtn" style="display:none;">Batal edit</button>
             </div>
           </div>
-          <div style="margin-top:16px;display:flex;gap:10px;">
-            <button class="btn" id="saveTransactionBtn">Simpan transaksi</button>
-            <button class="btn secondary" id="cancelEditBtn" style="display:none;">Batal edit</button>
+
+          <div class="card">
+            <div class="filters">
+              <div class="field">
+                <label for="filter-month">Bulan</label>
+                <input type="month" id="filter-month">
+              </div>
+              <div class="field">
+                <label for="filter-category">Kategori</label>
+                <select id="filter-category">
+                  <option value="">Semua kategori</option>
+                  <option>Material</option>
+                  <option>Alat / Sewa Alat</option>
+                  <option>Tenaga Kerja</option>
+                  <option>Transport</option>
+                  <option>Lain-lain</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="filter-status">Status</label>
+                <select id="filter-status">
+                  <option value="">Semua status</option>
+                  <option>Lunas</option>
+                  <option>Belum Lunas</option>
+                  <option>DP</option>
+                </select>
+              </div>
+              <button class="btn secondary small" id="clearFilterBtn">Reset filter</button>
+            </div>
+            <div style="overflow-x:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tanggal</th><th>Kategori</th><th>Vendor</th><th>Deskripsi</th>
+                    <th class="amount">Jumlah</th><th>Status</th><th></th>
+                  </tr>
+                </thead>
+                <tbody id="txTableBody"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="txEmptyMsg" style="display:none;">Belum ada transaksi yang cocok dengan filter.</div>
           </div>
         </div>
       </div>
 
-      <!-- DAFTAR -->
-      <div class="tab-panel" data-panel="daftar">
+      <!-- PENGELUARAN -->
+      <div class="tab-panel" data-panel="pengeluaran">
+        <div id="ex-noProjectMsg" class="card" style="display:none;">
+          <p style="margin:0;color:var(--muted);">Tambahkan proyek dulu di sebelah kiri sebelum mencatat pengeluaran.</p>
+        </div>
+        <div id="ex-content">
+          <div class="card">
+            <h2 id="expFormTitle">Catat pengeluaran baru</h2>
+            <p class="hint">Buat biaya operasional non-material — transport, konsumsi, perizinan, dsb.</p>
+            <div class="form-grid">
+              <div>
+                <label for="e-date">Tanggal</label>
+                <input type="date" id="e-date">
+              </div>
+              <div>
+                <label for="e-category">Kategori</label>
+                <select id="e-category">
+                  <option>Operasional</option>
+                  <option>Perizinan</option>
+                  <option>Konsumsi</option>
+                  <option>Transport</option>
+                  <option>Lain-lain</option>
+                </select>
+              </div>
+              <div class="full">
+                <label for="e-desc">Deskripsi</label>
+                <input type="text" id="e-desc" placeholder="mis. Uang makan tim, biaya parkir">
+              </div>
+              <div>
+                <label for="e-party">Pihak / Penerima (opsional)</label>
+                <input type="text" id="e-party" placeholder="mis. nama orang/warung">
+              </div>
+              <div>
+                <label for="e-amount">Jumlah (Rp)</label>
+                <input type="number" id="e-amount" placeholder="0" min="0">
+              </div>
+              <div>
+                <label for="e-status">Status pembayaran</label>
+                <select id="e-status">
+                  <option>Lunas</option>
+                  <option>Belum Lunas</option>
+                  <option>DP</option>
+                </select>
+              </div>
+              <div class="full">
+                <label for="e-note">Catatan tambahan (opsional)</label>
+                <textarea id="e-note" placeholder="Catatan bebas..."></textarea>
+              </div>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:10px;">
+              <button class="btn" id="saveExpenseBtn">Simpan pengeluaran</button>
+              <button class="btn secondary" id="cancelExpenseEditBtn" style="display:none;">Batal edit</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="filters">
+              <div class="field">
+                <label for="exfilter-month">Bulan</label>
+                <input type="month" id="exfilter-month">
+              </div>
+              <div class="field">
+                <label for="exfilter-category">Kategori</label>
+                <select id="exfilter-category">
+                  <option value="">Semua kategori</option>
+                  <option>Operasional</option>
+                  <option>Perizinan</option>
+                  <option>Konsumsi</option>
+                  <option>Transport</option>
+                  <option>Lain-lain</option>
+                </select>
+              </div>
+              <button class="btn secondary small" id="exClearFilterBtn">Reset filter</button>
+            </div>
+            <div style="overflow-x:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tanggal</th><th>Kategori</th><th>Deskripsi</th><th>Pihak</th>
+                    <th class="amount">Jumlah</th><th>Status</th><th></th>
+                  </tr>
+                </thead>
+                <tbody id="expTableBody"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="expEmptyMsg" style="display:none;">Belum ada pengeluaran yang cocok dengan filter.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RINGKASAN PROYEK -->
+      <div class="tab-panel" data-panel="ringkasan">
+        <div id="rk-noProjectMsg" class="card" style="display:none;">
+          <p style="margin:0;color:var(--muted);">Pilih proyek dulu buat lihat ringkasannya.</p>
+        </div>
+        <div id="rk-content">
+          <div class="card">
+            <div class="filters">
+              <div class="field">
+                <label for="summary-month">Periode (kosongkan = semua)</label>
+                <input type="month" id="summary-month">
+              </div>
+              <button class="btn secondary small" id="clearSummaryFilterBtn">Semua periode</button>
+            </div>
+            <div class="summary-grid">
+              <div class="stat">
+                <div class="label">Total transaksi (material)</div>
+                <div class="value" id="stat-total">Rp 0</div>
+              </div>
+              <div class="stat">
+                <div class="label">Total pengeluaran</div>
+                <div class="value" id="stat-expense">Rp 0</div>
+              </div>
+              <div class="stat">
+                <div class="label">Total keseluruhan</div>
+                <div class="value" id="stat-grand">Rp 0</div>
+              </div>
+              <div class="stat">
+                <div class="label">Belum lunas</div>
+                <div class="value warn" id="stat-unpaid">Rp 0</div>
+              </div>
+            </div>
+            <h2>Per kategori (transaksi)</h2>
+            <div id="categoryBars"></div>
+            <h2 class="sub">Per vendor (transaksi)</h2>
+            <div id="vendorBars"></div>
+            <h2 class="sub">Per kategori (pengeluaran)</h2>
+            <div id="expCategoryBars"></div>
+          </div>
+          <div class="toolbar">
+            <button class="btn secondary" id="openDownloadModalBtn">Unduh Laporan</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PETTY CASH -->
+      <div class="tab-panel" data-panel="pettycash">
+        <div class="summary-grid" style="grid-template-columns:1fr;max-width:280px;">
+          <div class="stat">
+            <div class="label">Saldo kas saat ini</div>
+            <div class="value" id="pettyBalance">Rp 0</div>
+          </div>
+        </div>
+        <div class="card">
+          <h2 id="pcFormTitle">Catat kas masuk / keluar</h2>
+          <div class="form-grid">
+            <div>
+              <label for="pc-date">Tanggal</label>
+              <input type="date" id="pc-date">
+            </div>
+            <div>
+              <label for="pc-type">Jenis</label>
+              <select id="pc-type">
+                <option>Masuk</option>
+                <option>Keluar</option>
+              </select>
+            </div>
+            <div class="full">
+              <label for="pc-desc">Keterangan</label>
+              <input type="text" id="pc-desc" placeholder="mis. Setoran kas awal bulan, beli konsumsi tim">
+            </div>
+            <div>
+              <label for="pc-amount">Jumlah (Rp)</label>
+              <input type="number" id="pc-amount" placeholder="0" min="0">
+            </div>
+            <div>
+              <label for="pc-project">Untuk proyek (opsional)</label>
+              <select id="pc-project">
+                <option value="">-</option>
+              </select>
+            </div>
+            <div class="full">
+              <label for="pc-note">Catatan tambahan (opsional)</label>
+              <textarea id="pc-note" placeholder="Catatan bebas..."></textarea>
+            </div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:10px;">
+            <button class="btn" id="savePettyCashBtn">Simpan</button>
+            <button class="btn secondary" id="cancelPcEditBtn" style="display:none;">Batal edit</button>
+          </div>
+        </div>
+
         <div class="card">
           <div class="filters">
             <div class="field">
-              <label for="filter-month">Bulan</label>
-              <input type="month" id="filter-month">
+              <label for="pcfilter-month">Bulan</label>
+              <input type="month" id="pcfilter-month">
             </div>
             <div class="field">
-              <label for="filter-category">Kategori</label>
-              <select id="filter-category">
-                <option value="">Semua kategori</option>
-                <option>Material</option>
-                <option>Alat / Sewa Alat</option>
-                <option>Tenaga Kerja</option>
-                <option>Transport</option>
-                <option>Lain-lain</option>
+              <label for="pcfilter-type">Jenis</label>
+              <select id="pcfilter-type">
+                <option value="">Semua jenis</option>
+                <option>Masuk</option>
+                <option>Keluar</option>
               </select>
             </div>
-            <div class="field">
-              <label for="filter-status">Status</label>
-              <select id="filter-status">
-                <option value="">Semua status</option>
-                <option>Lunas</option>
-                <option>Belum Lunas</option>
-                <option>DP</option>
-              </select>
-            </div>
-            <button class="btn secondary small" id="clearFilterBtn">Reset filter</button>
+            <button class="btn secondary small" id="pcClearFilterBtn">Reset filter</button>
           </div>
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr>
-                  <th>Tanggal</th><th>Kategori</th><th>Vendor</th><th>Deskripsi</th>
-                  <th class="amount">Jumlah</th><th>Status</th><th></th>
-                </tr>
+                <tr><th>Tanggal</th><th>Jenis</th><th>Keterangan</th><th>Proyek</th><th class="amount">Jumlah</th><th></th></tr>
               </thead>
-              <tbody id="txTableBody"></tbody>
+              <tbody id="pcTableBody"></tbody>
             </table>
           </div>
-          <div class="empty" id="txEmptyMsg" style="display:none;">Belum ada transaksi yang cocok dengan filter.</div>
+          <div class="empty" id="pcEmptyMsg" style="display:none;">Belum ada catatan kas.</div>
+          <div class="toolbar">
+            <button class="btn secondary small" id="exportPettyCashExcel">Unduh Riwayat Kas (Excel)</button>
+          </div>
         </div>
       </div>
 
-      <!-- RINGKASAN -->
-      <div class="tab-panel" data-panel="ringkasan">
+      <!-- INVENTORY -->
+      <div class="tab-panel" data-panel="inventory">
         <div class="card">
+          <h2>Tambah alat baru</h2>
+          <div class="form-grid">
+            <div>
+              <label for="inv-name">Nama alat</label>
+              <input type="text" id="inv-name" placeholder="mis. Mesin bor, sikat kolam">
+            </div>
+            <div>
+              <label for="inv-unit">Satuan</label>
+              <input type="text" id="inv-unit" placeholder="mis. unit, pcs, set" value="unit">
+            </div>
+            <div>
+              <label for="inv-initial">Stok awal</label>
+              <input type="number" id="inv-initial" placeholder="0" min="0" value="0">
+            </div>
+          </div>
+          <div style="margin-top:16px;">
+            <button class="btn" id="addInventoryItemBtn">Tambah alat</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Stok alat saat ini</h2>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Nama alat</th><th>Satuan</th><th class="amount">Stok sistem</th><th></th></tr></thead>
+              <tbody id="invStockTableBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="invItemsEmptyMsg" style="display:none;">Belum ada alat yang ditambahkan.</div>
+        </div>
+
+        <div class="card">
+          <h2>Catat transaksi alat</h2>
+          <p class="hint">Pembelian menambah stok, pemakaian ke proyek mengurangi stok, retur mengembalikan stok.</p>
+          <div class="form-grid">
+            <div>
+              <label for="mv-item">Alat</label>
+              <select id="mv-item"></select>
+            </div>
+            <div>
+              <label for="mv-type">Jenis transaksi</label>
+              <select id="mv-type">
+                <option>Pembelian</option>
+                <option>Pemakaian</option>
+                <option>Retur</option>
+              </select>
+            </div>
+            <div>
+              <label for="mv-date">Tanggal</label>
+              <input type="date" id="mv-date">
+            </div>
+            <div>
+              <label for="mv-qty">Jumlah</label>
+              <input type="number" id="mv-qty" placeholder="0" min="0">
+            </div>
+            <div id="mv-project-wrap">
+              <label for="mv-project">Untuk proyek</label>
+              <select id="mv-project"><option value="">-</option></select>
+            </div>
+            <div id="mv-vendor-wrap">
+              <label for="mv-vendor">Vendor (opsional)</label>
+              <input type="text" id="mv-vendor" placeholder="mis. Toko Alat Jaya">
+            </div>
+            <div id="mv-cost-wrap">
+              <label for="mv-cost">Total harga (opsional, Rp)</label>
+              <input type="number" id="mv-cost" placeholder="0" min="0">
+            </div>
+            <div class="full">
+              <label for="mv-note">Catatan (opsional)</label>
+              <input type="text" id="mv-note" placeholder="Catatan bebas...">
+            </div>
+          </div>
+          <div style="margin-top:16px;">
+            <button class="btn" id="saveMovementBtn">Simpan transaksi alat</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Riwayat pergerakan alat</h2>
           <div class="filters">
             <div class="field">
-              <label for="summary-month">Periode (kosongkan = semua)</label>
-              <input type="month" id="summary-month">
+              <label for="mvfilter-item">Alat</label>
+              <select id="mvfilter-item"><option value="">Semua alat</option></select>
             </div>
-            <button class="btn secondary small" id="clearSummaryFilterBtn">Semua periode</button>
+            <div class="field">
+              <label for="mvfilter-type">Jenis</label>
+              <select id="mvfilter-type">
+                <option value="">Semua jenis</option>
+                <option>Pembelian</option>
+                <option>Pemakaian</option>
+                <option>Retur</option>
+                <option>Penyesuaian</option>
+              </select>
+            </div>
+            <button class="btn secondary small" id="mvClearFilterBtn">Reset filter</button>
           </div>
-          <div class="summary-grid">
-            <div class="stat">
-              <div class="label">Total transaksi</div>
-              <div class="value" id="stat-total">Rp 0</div>
-            </div>
-            <div class="stat">
-              <div class="label">Jumlah nota</div>
-              <div class="value" id="stat-count">0</div>
-            </div>
-            <div class="stat">
-              <div class="label">Belum lunas</div>
-              <div class="value warn" id="stat-unpaid">Rp 0</div>
-            </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Tanggal</th><th>Alat</th><th>Jenis</th><th class="amount">Jumlah</th><th>Proyek</th><th>Vendor</th><th class="amount">Biaya</th><th></th></tr></thead>
+              <tbody id="mvTableBody"></tbody>
+            </table>
           </div>
-          <h2>Per kategori</h2>
-          <div id="categoryBars"></div>
-          <h2 style="margin-top:24px;">Per vendor</h2>
-          <div id="vendorBars"></div>
+          <div class="empty" id="mvEmptyMsg" style="display:none;">Belum ada riwayat.</div>
+          <div class="toolbar">
+            <button class="btn secondary small" id="exportInventoryExcel">Unduh Stok &amp; Riwayat (Excel)</button>
+          </div>
         </div>
-        <div class="toolbar">
-          <button class="btn secondary" id="exportSummaryPdf">Buka Laporan Ringkasan (PDF)</button>
-          <button class="btn secondary" id="exportListPdf">Buka Daftar Transaksi (PDF)</button>
+
+        <div class="card">
+          <h2>Stock opname</h2>
+          <p class="hint">Masukkan hasil hitung fisik tiap alat, bandingkan dengan stok sistem, lalu simpan sebagai penyesuaian.</p>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Nama alat</th><th class="amount">Stok sistem</th><th style="width:140px;">Stok fisik</th><th class="amount">Selisih</th></tr></thead>
+              <tbody id="opnameTableBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="opnameEmptyMsg" style="display:none;">Belum ada alat untuk di-opname.</div>
+          <div class="toolbar">
+            <button class="btn secondary small" id="downloadOpnameExcel">Unduh Hasil Opname (Excel)</button>
+            <button class="btn small" id="saveOpnameBtn">Simpan Penyesuaian Stok</button>
+          </div>
         </div>
       </div>
     </div>
@@ -486,19 +811,21 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ====== ISI DUA BARIS INI DENGAN DATA DARI SUPABASE PROJECT KAMU ======
 const SUPABASE_URL = 'https://boonrczmlaknckemxult.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_SPlqNDLNpAuBh-yciV3OpQ_FOs9ydCu';
-// =======================================================================
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
 
-let state = { projects: [], transactions: [] };
+let state = {
+  projects: [], transactions: [], expenses: [],
+  pettyCash: [], inventoryItems: [], inventoryMovements: []
+};
 let activeProjectId = null;
 let editingTxId = null;
+let editingExpId = null;
+let editingPcId = null;
 
-function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function rupiah(n){ return 'Rp ' + Math.round(n).toLocaleString('id-ID'); }
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 
@@ -507,31 +834,78 @@ function showToast(msg){
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(showToast._h);
-  showToast._h = setTimeout(()=>t.classList.remove('show'), 2200);
+  showToast._h = setTimeout(()=>t.classList.remove('show'), 2600);
 }
 
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
+function formatDateShort(iso){
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function formatMonthLabel(m){
+  const [y,mo] = m.split('-');
+  const d = new Date(parseInt(y), parseInt(mo)-1, 1);
+  return d.toLocaleDateString('id-ID', { month:'long', year:'numeric' });
+}
+
+// ===================== DATA LOADING =====================
+
 async function loadData(){
-  const [{ data: projects, error: projErr }, { data: transactions, error: txErr }] = await Promise.all([
+  const [
+    { data: projects, error: e1 },
+    { data: transactions, error: e2 },
+    { data: expenses, error: e3 },
+    { data: pettyCash, error: e4 },
+    { data: items, error: e5 },
+    { data: movements, error: e6 }
+  ] = await Promise.all([
     sb.from('projects').select('*').order('created_at', { ascending: true }),
-    sb.from('transactions').select('*').order('date', { ascending: false })
+    sb.from('transactions').select('*').order('date', { ascending: false }),
+    sb.from('expenses').select('*').order('date', { ascending: false }),
+    sb.from('petty_cash').select('*').order('date', { ascending: false }),
+    sb.from('inventory_items').select('*').order('created_at', { ascending: true }),
+    sb.from('inventory_movements').select('*').order('date', { ascending: false })
   ]);
-  if(projErr || txErr){
-    console.error(projErr || txErr);
-    showToast('Gagal memuat data dari Supabase.');
-    return;
-  }
-  state.projects = (projects || []).map(p => ({
-    id: p.id, name: p.name, client: p.client || '', location: p.location || '', createdAt: p.created_at
+  const err = e1||e2||e3||e4||e5||e6;
+  if(err){ console.error(err); showToast('Gagal memuat sebagian data dari Supabase.'); }
+
+  state.projects = (projects||[]).map(p=>({ id:p.id, name:p.name, client:p.client||'', location:p.location||'', createdAt:p.created_at }));
+  state.transactions = (transactions||[]).map(t=>({
+    id:t.id, projectId:t.project_id, date:t.date, category:t.category, vendor:t.vendor,
+    amount:Number(t.amount), description:t.description, status:t.status, ref:t.ref||'', note:t.note||''
   }));
-  state.transactions = (transactions || []).map(t => ({
-    id: t.id, projectId: t.project_id, date: t.date, category: t.category, vendor: t.vendor,
-    amount: Number(t.amount), description: t.description, status: t.status, ref: t.ref || '', note: t.note || '',
-    createdAt: t.created_at
+  state.expenses = (expenses||[]).map(x=>({
+    id:x.id, projectId:x.project_id, date:x.date, category:x.category, description:x.description,
+    amount:Number(x.amount), status:x.status, party:x.party||'', note:x.note||''
   }));
+  state.pettyCash = (pettyCash||[]).map(x=>({
+    id:x.id, date:x.date, type:x.type, amount:Number(x.amount), description:x.description,
+    projectId:x.project_id||'', note:x.note||''
+  }));
+  state.inventoryItems = (items||[]).map(x=>({
+    id:x.id, name:x.name, unit:x.unit, initialStock:Number(x.initial_stock)
+  }));
+  state.inventoryMovements = (movements||[]).map(x=>({
+    id:x.id, itemId:x.item_id, date:x.date, type:x.type, quantity:Number(x.quantity),
+    projectId:x.project_id||'', vendor:x.vendor||'', cost:x.cost!=null?Number(x.cost):null, note:x.note||''
+  }));
+
   if(state.projects.length && !activeProjectId){
     activeProjectId = state.projects[0].id;
   }
 }
+
+function getActiveProject(){ return state.projects.find(p=>p.id===activeProjectId); }
+function getProjectTransactions(){ return state.transactions.filter(t=>t.projectId===activeProjectId); }
+function getProjectExpenses(){ return state.expenses.filter(x=>x.projectId===activeProjectId); }
+
+// ===================== RENDER: SHELL =====================
 
 function renderProjectList(){
   const list = document.getElementById('projectList');
@@ -541,96 +915,173 @@ function renderProjectList(){
     li.className = 'project-item' + (p.id===activeProjectId ? ' active':'');
     li.innerHTML = `<span>${escapeHtml(p.name)}</span><button class="del-btn" title="Hapus proyek">✕</button>`;
     li.querySelector('span').addEventListener('click', ()=>{ activeProjectId = p.id; renderAll(); });
-    li.querySelector('.del-btn').addEventListener('click', (e)=>{
-      e.stopPropagation();
-      openConfirmDeleteProject(p);
-    });
+    li.querySelector('.del-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openConfirmDeleteProject(p); });
     list.appendChild(li);
   });
   document.getElementById('totalProjectsFoot').textContent = state.projects.length + ' proyek tersimpan';
-}
 
-function escapeHtml(s){
-  const d = document.createElement('div');
-  d.textContent = s == null ? '' : String(s);
-  return d.innerHTML;
-}
-
-function getActiveProject(){
-  return state.projects.find(p=>p.id===activeProjectId);
+  // keep project dropdowns (petty cash, inventory movement) in sync
+  const projOptions = ['<option value="">-</option>'].concat(
+    state.projects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`)
+  ).join('');
+  const pcSel = document.getElementById('pc-project');
+  const mvSel = document.getElementById('mv-project');
+  if(pcSel) pcSel.innerHTML = projOptions;
+  if(mvSel) mvSel.innerHTML = projOptions;
 }
 
 function renderTitleBlock(){
   const proj = getActiveProject();
   document.getElementById('todayDate').textContent = new Date().toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
-  const noProj = document.getElementById('noProjectMsg');
-  const tabContent = document.getElementById('tabContent');
-  if(!proj){
-    document.getElementById('activeProjectName').textContent = 'Belum ada proyek';
-    document.getElementById('activeProjectMeta').innerHTML = '';
-    noProj.style.display = 'block';
-    tabContent.style.display = 'none';
-    return;
-  }
-  noProj.style.display = 'none';
-  tabContent.style.display = 'block';
-  document.getElementById('activeProjectName').textContent = proj.name;
+  document.getElementById('activeProjectName').textContent = proj ? proj.name : 'Belum ada proyek';
   const bits = [];
-  if(proj.client) bits.push(`<span>Klien: <b>${escapeHtml(proj.client)}</b></span>`);
-  if(proj.location) bits.push(`<span>Lokasi: <b>${escapeHtml(proj.location)}</b></span>`);
-  const count = state.transactions.filter(t=>t.projectId===proj.id).length;
-  bits.push(`<span>Total nota: <b>${count}</b></span>`);
+  if(proj){
+    if(proj.client) bits.push(`<span>Klien: <b>${escapeHtml(proj.client)}</b></span>`);
+    if(proj.location) bits.push(`<span>Lokasi: <b>${escapeHtml(proj.location)}</b></span>`);
+    bits.push(`<span>Total nota: <b>${getProjectTransactions().length}</b></span>`);
+  }
   document.getElementById('activeProjectMeta').innerHTML = bits.join('');
+
+  const hasProj = !!proj;
+  document.getElementById('tx-noProjectMsg').style.display = hasProj ? 'none':'block';
+  document.getElementById('tx-content').style.display = hasProj ? 'block':'none';
+  document.getElementById('ex-noProjectMsg').style.display = hasProj ? 'none':'block';
+  document.getElementById('ex-content').style.display = hasProj ? 'block':'none';
+  document.getElementById('rk-noProjectMsg').style.display = hasProj ? 'none':'block';
+  document.getElementById('rk-content').style.display = hasProj ? 'block':'none';
 }
 
-function getProjectTransactions(){
-  return state.transactions.filter(t=>t.projectId===activeProjectId);
+function setupTabs(){
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelector(`.tab-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
+    });
+  });
 }
 
-function applyListFilters(list){
+function renderAll(){
+  renderProjectList();
+  renderTitleBlock();
+  renderTxTable();
+  renderExpTable();
+  renderSummary();
+  renderPettyCash();
+  renderInventoryAll();
+}
+
+// ===================== MODAL HELPER =====================
+
+function openModal({title, body, confirmLabel, onConfirm, formHtml, onSubmit, hideConfirm}){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal">
+        <h3>${title}</h3>
+        ${formHtml ? formHtml : `<p style="margin:0;color:var(--muted);">${body||''}</p>`}
+        <div class="modal-actions">
+          <button class="btn secondary" id="modalCancel">${hideConfirm ? 'Tutup':'Batal'}</button>
+          ${hideConfirm ? '' : `<button class="btn" id="modalConfirm">${confirmLabel || 'OK'}</button>`}
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalCancel').addEventListener('click', ()=>{ root.innerHTML=''; });
+  if(!hideConfirm){
+    document.getElementById('modalConfirm').addEventListener('click', async ()=>{
+      if(onSubmit){ const ok = await onSubmit(); if(ok === false) return; }
+      else if(onConfirm){ await onConfirm(); }
+      root.innerHTML = '';
+    });
+  }
+}
+
+// ===================== PROJECTS =====================
+
+function openAddProjectModal(){
+  openModal({
+    title: 'Tambah proyek baru',
+    confirmLabel: 'Simpan proyek',
+    formHtml: `
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div><label>Nama proyek</label><input type="text" id="np-name" placeholder="mis. Villa Kayu Putih - Kolam Renang"></div>
+        <div><label>Klien (opsional)</label><input type="text" id="np-client" placeholder="mis. Pak Dody"></div>
+        <div><label>Lokasi (opsional)</label><input type="text" id="np-location" placeholder="mis. Padang Sambian, Denpasar"></div>
+      </div>
+    `,
+    onSubmit: async ()=>{
+      const name = document.getElementById('np-name').value.trim();
+      if(!name){ showToast('Nama proyek wajib diisi.'); return false; }
+      const { data, error } = await sb.from('projects').insert({
+        user_id: currentUser.id, name,
+        client: document.getElementById('np-client').value.trim(),
+        location: document.getElementById('np-location').value.trim()
+      }).select().single();
+      if(error){ console.error(error); showToast('Gagal menambah proyek.'); return false; }
+      activeProjectId = data.id;
+      await loadData();
+      renderAll();
+      showToast('Proyek ditambahkan.');
+    }
+  });
+}
+
+function openConfirmDeleteProject(p){
+  openModal({
+    title: `Hapus proyek "${escapeHtml(p.name)}"?`,
+    body: 'Semua transaksi & pengeluaran di proyek ini akan ikut terhapus.',
+    confirmLabel: 'Hapus proyek',
+    onConfirm: async ()=>{
+      const { error } = await sb.from('projects').delete().eq('id', p.id);
+      if(error){ console.error(error); showToast('Gagal menghapus proyek.'); return; }
+      if(activeProjectId === p.id) activeProjectId = null;
+      await loadData();
+      if(!activeProjectId && state.projects.length) activeProjectId = state.projects[0].id;
+      renderAll();
+      showToast('Proyek dihapus.');
+    }
+  });
+}
+
+// ===================== TRANSAKSI =====================
+
+function applyTxFilters(list){
   const month = document.getElementById('filter-month').value;
   const cat = document.getElementById('filter-category').value;
   const status = document.getElementById('filter-status').value;
   return list.filter(t=>{
-    if(month && t.date.slice(0,7) !== month) return false;
-    if(cat && t.category !== cat) return false;
-    if(status && t.status !== status) return false;
+    if(month && t.date.slice(0,7)!==month) return false;
+    if(cat && t.category!==cat) return false;
+    if(status && t.status!==status) return false;
     return true;
   });
 }
 
-function renderTable(){
+function renderTxTable(){
   const body = document.getElementById('txTableBody');
   body.innerHTML = '';
-  let list = getProjectTransactions().slice().sort((a,b)=> b.date.localeCompare(a.date));
-  list = applyListFilters(list);
+  let list = getProjectTransactions().slice().sort((a,b)=>b.date.localeCompare(a.date));
+  list = applyTxFilters(list);
   document.getElementById('txEmptyMsg').style.display = list.length ? 'none':'block';
   list.forEach(t=>{
     const tr = document.createElement('tr');
-    const badgeClass = t.status === 'Lunas' ? 'lunas' : (t.status === 'DP' ? 'dp' : 'belum');
+    const badgeClass = t.status==='Lunas'?'lunas':(t.status==='DP'?'dp':'belum');
     tr.innerHTML = `
-      <td>${formatDateShort(t.date)}</td>
-      <td>${escapeHtml(t.category)}</td>
-      <td>${escapeHtml(t.vendor)}</td>
-      <td>${escapeHtml(t.description)}</td>
-      <td class="amount">${rupiah(t.amount)}</td>
+      <td>${formatDateShort(t.date)}</td><td>${escapeHtml(t.category)}</td><td>${escapeHtml(t.vendor)}</td>
+      <td>${escapeHtml(t.description)}</td><td class="amount">${rupiah(t.amount)}</td>
       <td><span class="badge ${badgeClass}">${escapeHtml(t.status)}</span></td>
       <td class="row-actions">
-        <button class="icon-btn" data-action="pdf" title="Buka bukti PDF">📄</button>
-        <button class="icon-btn" data-action="edit" title="Edit">✎</button>
-        <button class="icon-btn" data-action="del" title="Hapus">✕</button>
-      </td>
-    `;
-    tr.querySelector('[data-action="pdf"]').addEventListener('click', ()=>exportReceiptPdf(t));
-    tr.querySelector('[data-action="edit"]').addEventListener('click', ()=>startEditTransaction(t));
-    tr.querySelector('[data-action="del"]').addEventListener('click', ()=>openConfirmDeleteTx(t));
+        <button class="icon-btn" data-a="pdf" title="Buka bukti PDF">📄</button>
+        <button class="icon-btn" data-a="edit" title="Edit">✎</button>
+        <button class="icon-btn" data-a="del" title="Hapus">✕</button>
+      </td>`;
+    tr.querySelector('[data-a="pdf"]').addEventListener('click', ()=>exportReceiptPdf(t));
+    tr.querySelector('[data-a="edit"]').addEventListener('click', ()=>startEditTransaction(t));
+    tr.querySelector('[data-a="del"]').addEventListener('click', ()=>openConfirmDeleteTx(t));
     body.appendChild(tr);
   });
-}
-
-function formatDateShort(iso){
-  const d = new Date(iso+'T00:00:00');
-  return d.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
 }
 
 function startEditTransaction(t){
@@ -648,7 +1099,7 @@ function startEditTransaction(t){
   document.querySelector('.tab-btn[data-tab="input"]').click();
 }
 
-function resetForm(){
+function resetTxForm(){
   editingTxId = null;
   document.getElementById('f-date').value = todayISO();
   document.getElementById('f-category').value = 'Material';
@@ -668,149 +1119,134 @@ async function handleSaveTransaction(){
   const vendor = document.getElementById('f-vendor').value.trim();
   const amount = parseFloat(document.getElementById('f-amount').value);
   const description = document.getElementById('f-desc').value.trim();
-  if(!vendor || !description || !amount || amount <= 0){
-    showToast('Lengkapi vendor, deskripsi, dan jumlah dulu ya.');
-    return;
-  }
+  if(!vendor || !description || !amount || amount<=0){ showToast('Lengkapi vendor, deskripsi, dan jumlah dulu ya.'); return; }
   const row = {
-    project_id: activeProjectId,
-    user_id: currentUser.id,
-    date,
-    category: document.getElementById('f-category').value,
-    vendor,
-    amount,
-    description,
+    project_id: activeProjectId, user_id: currentUser.id, date,
+    category: document.getElementById('f-category').value, vendor, amount, description,
     status: document.getElementById('f-status').value,
     ref: document.getElementById('f-noref').value.trim(),
     note: document.getElementById('f-note').value.trim()
   };
   let error;
-  if(editingTxId){
-    ({ error } = await sb.from('transactions').update(row).eq('id', editingTxId));
-  } else {
-    ({ error } = await sb.from('transactions').insert(row));
-  }
-  if(error){
-    console.error(error);
-    showToast('Gagal menyimpan transaksi.');
-    return;
-  }
+  if(editingTxId){ ({error} = await sb.from('transactions').update(row).eq('id', editingTxId)); }
+  else { ({error} = await sb.from('transactions').insert(row)); }
+  if(error){ console.error(error); showToast('Gagal menyimpan transaksi.'); return; }
   showToast(editingTxId ? 'Transaksi diperbarui.' : 'Transaksi disimpan.');
-  resetForm();
+  resetTxForm();
   await loadData();
   renderAll();
 }
 
 function openConfirmDeleteTx(t){
   openModal({
-    title: 'Hapus transaksi ini?',
-    body: `${escapeHtml(t.description)} — ${rupiah(t.amount)}`,
+    title: 'Hapus transaksi ini?', body: `${escapeHtml(t.description)} — ${rupiah(t.amount)}`,
     confirmLabel: 'Hapus',
     onConfirm: async ()=>{
       const { error } = await sb.from('transactions').delete().eq('id', t.id);
       if(error){ console.error(error); showToast('Gagal menghapus transaksi.'); return; }
-      await loadData();
-      renderAll();
-      showToast('Transaksi dihapus.');
+      await loadData(); renderAll(); showToast('Transaksi dihapus.');
     }
   });
 }
 
-function openConfirmDeleteProject(p){
+// ===================== PENGELUARAN =====================
+
+function applyExpFilters(list){
+  const month = document.getElementById('exfilter-month').value;
+  const cat = document.getElementById('exfilter-category').value;
+  return list.filter(x=>{
+    if(month && x.date.slice(0,7)!==month) return false;
+    if(cat && x.category!==cat) return false;
+    return true;
+  });
+}
+
+function renderExpTable(){
+  const body = document.getElementById('expTableBody');
+  body.innerHTML = '';
+  let list = getProjectExpenses().slice().sort((a,b)=>b.date.localeCompare(a.date));
+  list = applyExpFilters(list);
+  document.getElementById('expEmptyMsg').style.display = list.length ? 'none':'block';
+  list.forEach(x=>{
+    const tr = document.createElement('tr');
+    const badgeClass = x.status==='Lunas'?'lunas':(x.status==='DP'?'dp':'belum');
+    tr.innerHTML = `
+      <td>${formatDateShort(x.date)}</td><td>${escapeHtml(x.category)}</td><td>${escapeHtml(x.description)}</td>
+      <td>${escapeHtml(x.party)}</td><td class="amount">${rupiah(x.amount)}</td>
+      <td><span class="badge ${badgeClass}">${escapeHtml(x.status)}</span></td>
+      <td class="row-actions">
+        <button class="icon-btn" data-a="edit" title="Edit">✎</button>
+        <button class="icon-btn" data-a="del" title="Hapus">✕</button>
+      </td>`;
+    tr.querySelector('[data-a="edit"]').addEventListener('click', ()=>startEditExpense(x));
+    tr.querySelector('[data-a="del"]').addEventListener('click', ()=>openConfirmDeleteExpense(x));
+    body.appendChild(tr);
+  });
+}
+
+function startEditExpense(x){
+  editingExpId = x.id;
+  document.getElementById('e-date').value = x.date;
+  document.getElementById('e-category').value = x.category;
+  document.getElementById('e-desc').value = x.description;
+  document.getElementById('e-party').value = x.party || '';
+  document.getElementById('e-amount').value = x.amount;
+  document.getElementById('e-status').value = x.status;
+  document.getElementById('e-note').value = x.note || '';
+  document.getElementById('expFormTitle').textContent = 'Edit pengeluaran';
+  document.getElementById('cancelExpenseEditBtn').style.display = 'inline-block';
+  document.querySelector('.tab-btn[data-tab="pengeluaran"]').click();
+}
+
+function resetExpForm(){
+  editingExpId = null;
+  document.getElementById('e-date').value = todayISO();
+  document.getElementById('e-category').value = 'Operasional';
+  document.getElementById('e-desc').value = '';
+  document.getElementById('e-party').value = '';
+  document.getElementById('e-amount').value = '';
+  document.getElementById('e-status').value = 'Lunas';
+  document.getElementById('e-note').value = '';
+  document.getElementById('expFormTitle').textContent = 'Catat pengeluaran baru';
+  document.getElementById('cancelExpenseEditBtn').style.display = 'none';
+}
+
+async function handleSaveExpense(){
+  if(!activeProjectId){ showToast('Pilih atau tambah proyek dulu.'); return; }
+  const date = document.getElementById('e-date').value || todayISO();
+  const description = document.getElementById('e-desc').value.trim();
+  const amount = parseFloat(document.getElementById('e-amount').value);
+  if(!description || !amount || amount<=0){ showToast('Lengkapi deskripsi dan jumlah dulu ya.'); return; }
+  const row = {
+    project_id: activeProjectId, user_id: currentUser.id, date,
+    category: document.getElementById('e-category').value, description,
+    party: document.getElementById('e-party').value.trim(), amount,
+    status: document.getElementById('e-status').value,
+    note: document.getElementById('e-note').value.trim()
+  };
+  let error;
+  if(editingExpId){ ({error} = await sb.from('expenses').update(row).eq('id', editingExpId)); }
+  else { ({error} = await sb.from('expenses').insert(row)); }
+  if(error){ console.error(error); showToast('Gagal menyimpan pengeluaran.'); return; }
+  showToast(editingExpId ? 'Pengeluaran diperbarui.' : 'Pengeluaran disimpan.');
+  resetExpForm();
+  await loadData();
+  renderAll();
+}
+
+function openConfirmDeleteExpense(x){
   openModal({
-    title: `Hapus proyek "${escapeHtml(p.name)}"?`,
-    body: 'Semua transaksi di proyek ini akan ikut terhapus.',
-    confirmLabel: 'Hapus proyek',
+    title: 'Hapus pengeluaran ini?', body: `${escapeHtml(x.description)} — ${rupiah(x.amount)}`,
+    confirmLabel: 'Hapus',
     onConfirm: async ()=>{
-      const { error } = await sb.from('projects').delete().eq('id', p.id);
-      if(error){ console.error(error); showToast('Gagal menghapus proyek.'); return; }
-      if(activeProjectId === p.id){ activeProjectId = null; }
-      await loadData();
-      if(!activeProjectId && state.projects.length) activeProjectId = state.projects[0].id;
-      renderAll();
-      showToast('Proyek dihapus.');
+      const { error } = await sb.from('expenses').delete().eq('id', x.id);
+      if(error){ console.error(error); showToast('Gagal menghapus pengeluaran.'); return; }
+      await loadData(); renderAll(); showToast('Pengeluaran dihapus.');
     }
   });
 }
 
-function openModal({title, body, confirmLabel, onConfirm, formHtml, onSubmit}){
-  const root = document.getElementById('modalRoot');
-  root.innerHTML = `
-    <div class="modal-overlay">
-      <div class="modal">
-        <h3>${title}</h3>
-        ${formHtml ? formHtml : `<p style="margin:0;color:var(--muted);">${body||''}</p>`}
-        <div class="modal-actions">
-          <button class="btn secondary" id="modalCancel">Batal</button>
-          <button class="btn" id="modalConfirm">${confirmLabel || 'OK'}</button>
-        </div>
-      </div>
-    </div>
-  `;
-  document.getElementById('modalCancel').addEventListener('click', ()=>{ root.innerHTML=''; });
-  document.getElementById('modalConfirm').addEventListener('click', async ()=>{
-    if(onSubmit){
-      const ok = await onSubmit();
-      if(ok === false) return;
-    } else if(onConfirm){
-      await onConfirm();
-    }
-    root.innerHTML = '';
-  });
-}
-
-function openAddProjectModal(){
-  openModal({
-    title: 'Tambah proyek baru',
-    confirmLabel: 'Simpan proyek',
-    formHtml: `
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div>
-          <label>Nama proyek</label>
-          <input type="text" id="np-name" placeholder="mis. Villa Kayu Putih - Kolam Renang">
-        </div>
-        <div>
-          <label>Klien (opsional)</label>
-          <input type="text" id="np-client" placeholder="mis. Pak Dody">
-        </div>
-        <div>
-          <label>Lokasi (opsional)</label>
-          <input type="text" id="np-location" placeholder="mis. Padang Sambian, Denpasar">
-        </div>
-      </div>
-    `,
-    onSubmit: async ()=>{
-      const name = document.getElementById('np-name').value.trim();
-      if(!name){ showToast('Nama proyek wajib diisi.'); return false; }
-      const { data, error } = await sb.from('projects').insert({
-        user_id: currentUser.id,
-        name,
-        client: document.getElementById('np-client').value.trim(),
-        location: document.getElementById('np-location').value.trim()
-      }).select().single();
-      if(error){ console.error(error); showToast('Gagal menambah proyek.'); return false; }
-      activeProjectId = data.id;
-      await loadData();
-      renderAll();
-      showToast('Proyek ditambahkan.');
-    }
-  });
-}
-
-function renderSummary(){
-  const month = document.getElementById('summary-month').value;
-  let list = getProjectTransactions();
-  if(month) list = list.filter(t=>t.date.slice(0,7)===month);
-
-  const total = list.reduce((s,t)=>s+t.amount,0);
-  const unpaid = list.filter(t=>t.status!=='Lunas').reduce((s,t)=>s+t.amount,0);
-  document.getElementById('stat-total').textContent = rupiah(total);
-  document.getElementById('stat-count').textContent = list.length;
-  document.getElementById('stat-unpaid').textContent = rupiah(unpaid);
-
-  renderBarBreakdown('categoryBars', groupSum(list, 'category'), total);
-  renderBarBreakdown('vendorBars', groupSum(list, 'vendor'), total);
-}
+// ===================== RINGKASAN PROYEK =====================
 
 function groupSum(list, key){
   const map = {};
@@ -818,25 +1254,55 @@ function groupSum(list, key){
   return Object.entries(map).sort((a,b)=>b[1]-a[1]);
 }
 
-function renderBarBreakdown(containerId, entries, total){
+function renderBarBreakdown(containerId, entries){
   const el = document.getElementById(containerId);
   el.innerHTML = '';
-  if(!entries.length){
-    el.innerHTML = '<p class="empty">Belum ada data.</p>';
-    return;
-  }
+  if(!entries.length){ el.innerHTML = '<p class="empty">Belum ada data.</p>'; return; }
   const max = Math.max(...entries.map(e=>e[1]));
-  entries.forEach(([label, val])=>{
+  entries.forEach(([label,val])=>{
     const pct = max ? (val/max*100) : 0;
     const row = document.createElement('div');
     row.className = 'bar-row';
-    row.innerHTML = `
-      <div class="bar-label">${escapeHtml(label)}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-      <div class="bar-value">${rupiah(val)}</div>
-    `;
+    row.innerHTML = `<div class="bar-label">${escapeHtml(label)}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div class="bar-value">${rupiah(val)}</div>`;
     el.appendChild(row);
   });
+}
+
+function getSummaryFilteredData(){
+  const month = document.getElementById('summary-month').value;
+  let tx = getProjectTransactions();
+  let ex = getProjectExpenses();
+  if(month){
+    tx = tx.filter(t=>t.date.slice(0,7)===month);
+    ex = ex.filter(x=>x.date.slice(0,7)===month);
+  }
+  return { tx, ex, month };
+}
+
+function renderSummary(){
+  const { tx, ex } = getSummaryFilteredData();
+  const totalTx = tx.reduce((s,t)=>s+t.amount,0);
+  const totalEx = ex.reduce((s,x)=>s+x.amount,0);
+  const unpaid = tx.filter(t=>t.status!=='Lunas').reduce((s,t)=>s+t.amount,0)
+               + ex.filter(x=>x.status!=='Lunas').reduce((s,x)=>s+x.amount,0);
+  document.getElementById('stat-total').textContent = rupiah(totalTx);
+  document.getElementById('stat-expense').textContent = rupiah(totalEx);
+  document.getElementById('stat-grand').textContent = rupiah(totalTx+totalEx);
+  document.getElementById('stat-unpaid').textContent = rupiah(unpaid);
+  renderBarBreakdown('categoryBars', groupSum(tx,'category'));
+  renderBarBreakdown('vendorBars', groupSum(tx,'vendor'));
+  renderBarBreakdown('expCategoryBars', groupSum(ex,'category'));
+}
+
+function openPdfSafely(doc, filename){
+  try{
+    const blobUrl = doc.output('bloburl');
+    const win = window.open(blobUrl, '_blank');
+    if(!win){ doc.save(filename); } else { showToast('PDF dibuka di tab baru — simpan dari sana.'); }
+  }catch(e){
+    console.error(e);
+    try{ doc.save(filename); }catch(e2){ showToast('Gagal membuat PDF. Coba lagi.'); }
+  }
 }
 
 function exportReceiptPdf(t){
@@ -844,235 +1310,521 @@ function exportReceiptPdf(t){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a5' });
   const pageW = doc.internal.pageSize.getWidth();
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(13);
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
   doc.text('BUKTI TRANSAKSI', pageW/2, 16, { align:'center' });
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(9);
-  doc.text(proj ? proj.name : '-', pageW/2, 22, { align:'center' });
-  doc.setDrawColor(150);
-  doc.line(12, 26, pageW-12, 26);
-
-  const rows = [
-    ['Tanggal', formatDateShort(t.date)],
-    ['Kategori', t.category],
-    ['Vendor / Toko', t.vendor],
-    ['Deskripsi', t.description],
-    ['Status', t.status],
-    ['No. Ref', t.ref || '-'],
-  ];
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text(proj?proj.name:'-', pageW/2, 22, { align:'center' });
+  doc.setDrawColor(150); doc.line(12,26,pageW-12,26);
   doc.autoTable({
-    startY: 32,
-    theme: 'plain',
-    styles: { fontSize: 10, cellPadding: 1.5 },
-    columnStyles: { 0: { fontStyle:'bold', cellWidth: 32 } },
-    body: rows,
-    margin: { left: 12, right: 12 }
+    startY:32, theme:'plain', styles:{fontSize:10,cellPadding:1.5},
+    columnStyles:{0:{fontStyle:'bold',cellWidth:32}},
+    body:[['Tanggal',formatDateShort(t.date)],['Kategori',t.category],['Vendor / Toko',t.vendor],
+          ['Deskripsi',t.description],['Status',t.status],['No. Ref',t.ref||'-']],
+    margin:{left:12,right:12}
   });
-
   let y = doc.lastAutoTable.finalY + 6;
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(12);
+  doc.setFont('helvetica','bold'); doc.setFontSize(12);
   doc.text('Jumlah: ' + rupiah(t.amount), 12, y);
-
-  if(t.note){
-    y += 10;
-    doc.setFont('helvetica','italic');
-    doc.setFontSize(9);
-    doc.text('Catatan: ' + t.note, 12, y, { maxWidth: pageW-24 });
-  }
-
-  doc.setFontSize(8);
-  doc.setTextColor(140);
-  doc.text('Dibuat: ' + new Date().toLocaleString('id-ID'), 12, doc.internal.pageSize.getHeight()-10);
-
+  if(t.note){ y+=10; doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.text('Catatan: '+t.note, 12, y, {maxWidth:pageW-24}); }
+  doc.setFontSize(8); doc.setTextColor(140);
+  doc.text('Dibuat: '+new Date().toLocaleString('id-ID'), 12, doc.internal.pageSize.getHeight()-10);
   openPdfSafely(doc, `bukti-${(t.vendor||'transaksi').replace(/\s+/g,'-').toLowerCase()}-${t.date}.pdf`);
-}
-
-function openPdfSafely(doc, filename){
-  try{
-    const blobUrl = doc.output('bloburl');
-    const win = window.open(blobUrl, '_blank');
-    if(!win){
-      // popup blocked — fall back to direct download attempt
-      doc.save(filename);
-    } else {
-      showToast('PDF dibuka di tab baru — simpan dari sana.');
-    }
-  }catch(e){
-    console.error(e);
-    try{ doc.save(filename); }catch(e2){ showToast('Gagal membuat PDF. Coba lagi.'); }
-  }
 }
 
 function exportListPdf(){
   const proj = getActiveProject();
   if(!proj){ showToast('Pilih proyek dulu.'); return; }
   let list = getProjectTransactions().slice().sort((a,b)=>a.date.localeCompare(b.date));
-  list = applyListFilters(list);
+  const month = document.getElementById('summary-month').value;
+  if(month) list = list.filter(t=>t.date.slice(0,7)===month);
   if(!list.length){ showToast('Tidak ada transaksi untuk diekspor.'); return; }
-
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4' });
   const pageW = doc.internal.pageSize.getWidth();
-
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(14);
-  doc.text('DAFTAR TRANSAKSI', 14, 16);
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(10);
-  doc.text(proj.name, 14, 23);
-  if(proj.client) doc.text('Klien: ' + proj.client, 14, 28);
-  doc.setFontSize(9);
-  doc.setTextColor(120);
-  doc.text('Dibuat: ' + new Date().toLocaleString('id-ID'), pageW-14, 16, { align:'right' });
-
-  const body = list.map(t=>[
-    formatDateShort(t.date), t.category, t.vendor, t.description, rupiah(t.amount), t.status
-  ]);
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text('DAFTAR TRANSAKSI', 14, 16);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(proj.name, 14, 23);
+  if(proj.client) doc.text('Klien: '+proj.client, 14, 28);
+  doc.setFontSize(9); doc.setTextColor(120);
+  doc.text('Dibuat: '+new Date().toLocaleString('id-ID'), pageW-14, 16, { align:'right' });
+  const body = list.map(t=>[formatDateShort(t.date), t.category, t.vendor, t.description, rupiah(t.amount), t.status]);
   const total = list.reduce((s,t)=>s+t.amount,0);
-
   doc.autoTable({
-    startY: 34,
-    head: [['Tanggal','Kategori','Vendor','Deskripsi','Jumlah','Status']],
-    body,
-    styles: { fontSize: 8.5, cellPadding: 2 },
-    headStyles: { fillColor: [28,75,77] },
-    columnStyles: { 4: { halign:'right' } },
-    margin: { left: 14, right: 14 }
+    startY:34, head:[['Tanggal','Kategori','Vendor','Deskripsi','Jumlah','Status']], body,
+    styles:{fontSize:8.5,cellPadding:2}, headStyles:{fillColor:[28,75,77]},
+    columnStyles:{4:{halign:'right'}}, margin:{left:14,right:14}
   });
-
   const y = doc.lastAutoTable.finalY + 8;
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(11);
-  doc.text('TOTAL: ' + rupiah(total), pageW-14, y, { align:'right' });
-
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('TOTAL: '+rupiah(total), pageW-14, y, { align:'right' });
   openPdfSafely(doc, `daftar-transaksi-${proj.name.replace(/\s+/g,'-').toLowerCase()}.pdf`);
 }
 
 function exportSummaryPdf(){
   const proj = getActiveProject();
   if(!proj){ showToast('Pilih proyek dulu.'); return; }
-  const month = document.getElementById('summary-month').value;
-  let list = getProjectTransactions();
-  if(month) list = list.filter(t=>t.date.slice(0,7)===month);
-  if(!list.length){ showToast('Tidak ada data untuk periode ini.'); return; }
+  const { tx, ex, month } = getSummaryFilteredData();
+  if(!tx.length && !ex.length){ showToast('Tidak ada data untuk periode ini.'); return; }
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4' });
   const pageW = doc.internal.pageSize.getWidth();
 
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(14);
-  doc.text('LAPORAN RINGKASAN TRANSAKSI', 14, 16);
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(10);
-  doc.text(proj.name, 14, 23);
-  if(proj.client) doc.text('Klien: ' + proj.client, 14, 28);
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text('LAPORAN RINGKASAN PROYEK', 14, 16);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(proj.name, 14, 23);
+  if(proj.client) doc.text('Klien: '+proj.client, 14, 28);
   doc.setFontSize(9);
   doc.text('Periode: ' + (month ? formatMonthLabel(month) : 'Semua periode'), 14, 33);
   doc.setTextColor(120);
-  doc.text('Dibuat: ' + new Date().toLocaleString('id-ID'), pageW-14, 16, { align:'right' });
+  doc.text('Dibuat: '+new Date().toLocaleString('id-ID'), pageW-14, 16, { align:'right' });
   doc.setTextColor(0);
 
-  const total = list.reduce((s,t)=>s+t.amount,0);
-  const unpaid = list.filter(t=>t.status!=='Lunas').reduce((s,t)=>s+t.amount,0);
+  const totalTx = tx.reduce((s,t)=>s+t.amount,0);
+  const totalEx = ex.reduce((s,x)=>s+x.amount,0);
+  const unpaid = tx.filter(t=>t.status!=='Lunas').reduce((s,t)=>s+t.amount,0)
+               + ex.filter(x=>x.status!=='Lunas').reduce((s,x)=>s+x.amount,0);
 
   doc.autoTable({
-    startY: 40,
-    theme: 'plain',
-    styles: { fontSize: 10, cellPadding: 1.5 },
-    columnStyles: { 0: { fontStyle:'bold', cellWidth: 50 } },
-    body: [
-      ['Total transaksi', rupiah(total)],
-      ['Jumlah nota', String(list.length)],
+    startY:40, theme:'plain', styles:{fontSize:10,cellPadding:1.5},
+    columnStyles:{0:{fontStyle:'bold',cellWidth:60}},
+    body:[
+      ['Total transaksi (material)', rupiah(totalTx)],
+      ['Total pengeluaran', rupiah(totalEx)],
+      ['Total keseluruhan', rupiah(totalTx+totalEx)],
       ['Belum lunas', rupiah(unpaid)],
     ],
-    margin: { left: 14, right: 14 }
+    margin:{left:14,right:14}
   });
 
   let y = doc.lastAutoTable.finalY + 8;
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(11);
-  doc.text('Per Kategori', 14, y);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Rincian Transaksi & Pengeluaran (urut tanggal)', 14, y);
   y += 4;
-  const catRows = groupSum(list,'category').map(([k,v])=>[k, rupiah(v)]);
+  const combined = [
+    ...tx.map(t=>({ date:t.date, jenis:'Transaksi', kategori:t.category, ket:t.vendor+' — '+t.description, jumlah:t.amount, status:t.status })),
+    ...ex.map(x=>({ date:x.date, jenis:'Pengeluaran', kategori:x.category, ket:x.description+(x.party?' — '+x.party:''), jumlah:x.amount, status:x.status }))
+  ].sort((a,b)=>a.date.localeCompare(b.date));
   doc.autoTable({
-    startY: y,
-    head: [['Kategori','Jumlah']],
-    body: catRows,
-    styles: { fontSize: 9, cellPadding: 2 },
-    headStyles: { fillColor: [28,75,77] },
-    columnStyles: { 1: { halign:'right' } },
-    margin: { left: 14, right: 14 }
+    startY:y,
+    head:[['Tanggal','Jenis','Kategori','Keterangan','Jumlah','Status']],
+    body: combined.map(r=>[formatDateShort(r.date), r.jenis, r.kategori, r.ket, rupiah(r.jumlah), r.status]),
+    styles:{fontSize:8,cellPadding:2}, headStyles:{fillColor:[28,75,77]},
+    columnStyles:{4:{halign:'right'}}, margin:{left:14,right:14}
   });
 
   y = doc.lastAutoTable.finalY + 8;
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(11);
-  doc.text('Per Vendor', 14, y);
-  y += 4;
-  const vendRows = groupSum(list,'vendor').map(([k,v])=>[k, rupiah(v)]);
-  doc.autoTable({
-    startY: y,
-    head: [['Vendor','Jumlah']],
-    body: vendRows,
-    styles: { fontSize: 9, cellPadding: 2 },
-    headStyles: { fillColor: [28,75,77] },
-    columnStyles: { 1: { halign:'right' } },
-    margin: { left: 14, right: 14 }
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Per Kategori (Transaksi)', 14, y); y+=4;
+  doc.autoTable({ startY:y, head:[['Kategori','Jumlah']], body: groupSum(tx,'category').map(([k,v])=>[k,rupiah(v)]),
+    styles:{fontSize:9,cellPadding:2}, headStyles:{fillColor:[28,75,77]}, columnStyles:{1:{halign:'right'}}, margin:{left:14,right:14} });
+
+  y = doc.lastAutoTable.finalY + 8;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Per Vendor (Transaksi)', 14, y); y+=4;
+  doc.autoTable({ startY:y, head:[['Vendor','Jumlah']], body: groupSum(tx,'vendor').map(([k,v])=>[k,rupiah(v)]),
+    styles:{fontSize:9,cellPadding:2}, headStyles:{fillColor:[28,75,77]}, columnStyles:{1:{halign:'right'}}, margin:{left:14,right:14} });
+
+  openPdfSafely(doc, `ringkasan-${proj.name.replace(/\s+/g,'-').toLowerCase()}${month?'-'+month:''}.pdf`);
+}
+
+function exportProjectExcel(){
+  const proj = getActiveProject();
+  if(!proj){ showToast('Pilih proyek dulu.'); return; }
+  const { tx, ex, month } = getSummaryFilteredData();
+  const wb = XLSX.utils.book_new();
+  const txRows = tx.map(t=>({ Tanggal:t.date, Kategori:t.category, Vendor:t.vendor, Deskripsi:t.description, Jumlah:t.amount, Status:t.status, 'No Ref':t.ref, Catatan:t.note }));
+  const exRows = ex.map(x=>({ Tanggal:x.date, Kategori:x.category, Deskripsi:x.description, Pihak:x.party, Jumlah:x.amount, Status:x.status, Catatan:x.note }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txRows.length?txRows:[{Info:'Belum ada transaksi'}]), 'Transaksi');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(exRows.length?exRows:[{Info:'Belum ada pengeluaran'}]), 'Pengeluaran');
+  XLSX.writeFile(wb, `data-${proj.name.replace(/\s+/g,'-').toLowerCase()}${month?'-'+month:''}.xlsx`);
+  showToast('File Excel diunduh.');
+}
+
+function openDownloadModal(){
+  openModal({
+    title: 'Unduh laporan proyek',
+    confirmLabel: 'Unduh',
+    formHtml: `
+      <div>
+        <label class="radio-opt"><input type="radio" name="dl-opt" value="summary" checked>
+          <div><div class="opt-title">Laporan Ringkasan (PDF)</div><div class="opt-desc">Total, breakdown kategori/vendor, dan tabel lengkap transaksi + pengeluaran dengan tanggal.</div></div>
+        </label>
+        <label class="radio-opt"><input type="radio" name="dl-opt" value="list">
+          <div><div class="opt-title">Daftar Transaksi (PDF)</div><div class="opt-desc">Tabel transaksi material saja, urut tanggal.</div></div>
+        </label>
+        <label class="radio-opt"><input type="radio" name="dl-opt" value="excel">
+          <div><div class="opt-title">Data Mentah (Excel)</div><div class="opt-desc">Transaksi & pengeluaran dalam 2 sheet, siap diolah lagi.</div></div>
+        </label>
+      </div>
+    `,
+    onSubmit: async ()=>{
+      const val = document.querySelector('input[name="dl-opt"]:checked').value;
+      if(val==='summary') exportSummaryPdf();
+      else if(val==='list') exportListPdf();
+      else exportProjectExcel();
+    }
   });
-
-  openPdfSafely(doc, `ringkasan-${proj.name.replace(/\s+/g,'-').toLowerCase()}${month ? '-'+month : ''}.pdf`);
 }
 
-function formatMonthLabel(m){
-  const [y,mo] = m.split('-');
-  const d = new Date(parseInt(y), parseInt(mo)-1, 1);
-  return d.toLocaleDateString('id-ID', { month:'long', year:'numeric' });
+// ===================== PETTY CASH =====================
+
+function applyPcFilters(list){
+  const month = document.getElementById('pcfilter-month').value;
+  const type = document.getElementById('pcfilter-type').value;
+  return list.filter(x=>{
+    if(month && x.date.slice(0,7)!==month) return false;
+    if(type && x.type!==type) return false;
+    return true;
+  });
 }
 
-function renderAll(){
-  renderProjectList();
-  renderTitleBlock();
-  renderTable();
-  renderSummary();
+function renderPettyCash(){
+  const balance = state.pettyCash.reduce((s,x)=> s + (x.type==='Masuk'?x.amount:-x.amount), 0);
+  const balEl = document.getElementById('pettyBalance');
+  balEl.textContent = rupiah(balance);
+  balEl.className = 'value ' + (balance < 0 ? 'warn' : 'ok');
+
+  const body = document.getElementById('pcTableBody');
+  body.innerHTML = '';
+  let list = state.pettyCash.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  list = applyPcFilters(list);
+  document.getElementById('pcEmptyMsg').style.display = list.length ? 'none':'block';
+  list.forEach(x=>{
+    const proj = state.projects.find(p=>p.id===x.projectId);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${formatDateShort(x.date)}</td>
+      <td><span class="badge ${x.type==='Masuk'?'masuk':'keluar'}">${x.type}</span></td>
+      <td>${escapeHtml(x.description)}</td>
+      <td>${proj?escapeHtml(proj.name):'-'}</td>
+      <td class="amount">${rupiah(x.amount)}</td>
+      <td class="row-actions">
+        <button class="icon-btn" data-a="edit" title="Edit">✎</button>
+        <button class="icon-btn" data-a="del" title="Hapus">✕</button>
+      </td>`;
+    tr.querySelector('[data-a="edit"]').addEventListener('click', ()=>startEditPettyCash(x));
+    tr.querySelector('[data-a="del"]').addEventListener('click', ()=>openConfirmDeletePettyCash(x));
+    body.appendChild(tr);
+  });
 }
 
-function setupTabs(){
-  document.querySelectorAll('.tab-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-      btn.classList.add('active');
-      document.querySelector(`.tab-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
+function startEditPettyCash(x){
+  editingPcId = x.id;
+  document.getElementById('pc-date').value = x.date;
+  document.getElementById('pc-type').value = x.type;
+  document.getElementById('pc-desc').value = x.description;
+  document.getElementById('pc-amount').value = x.amount;
+  document.getElementById('pc-project').value = x.projectId || '';
+  document.getElementById('pc-note').value = x.note || '';
+  document.getElementById('pcFormTitle').textContent = 'Edit catatan kas';
+  document.getElementById('cancelPcEditBtn').style.display = 'inline-block';
+  document.querySelector('.tab-btn[data-tab="pettycash"]').click();
+}
+
+function resetPcForm(){
+  editingPcId = null;
+  document.getElementById('pc-date').value = todayISO();
+  document.getElementById('pc-type').value = 'Masuk';
+  document.getElementById('pc-desc').value = '';
+  document.getElementById('pc-amount').value = '';
+  document.getElementById('pc-project').value = '';
+  document.getElementById('pc-note').value = '';
+  document.getElementById('pcFormTitle').textContent = 'Catat kas masuk / keluar';
+  document.getElementById('cancelPcEditBtn').style.display = 'none';
+}
+
+async function handleSavePettyCash(){
+  const date = document.getElementById('pc-date').value || todayISO();
+  const description = document.getElementById('pc-desc').value.trim();
+  const amount = parseFloat(document.getElementById('pc-amount').value);
+  if(!description || !amount || amount<=0){ showToast('Lengkapi keterangan dan jumlah dulu ya.'); return; }
+  const row = {
+    user_id: currentUser.id, date, type: document.getElementById('pc-type').value,
+    amount, description, project_id: document.getElementById('pc-project').value || null,
+    note: document.getElementById('pc-note').value.trim()
+  };
+  let error;
+  if(editingPcId){ ({error} = await sb.from('petty_cash').update(row).eq('id', editingPcId)); }
+  else { ({error} = await sb.from('petty_cash').insert(row)); }
+  if(error){ console.error(error); showToast('Gagal menyimpan catatan kas.'); return; }
+  showToast(editingPcId ? 'Catatan kas diperbarui.' : 'Catatan kas disimpan.');
+  resetPcForm();
+  await loadData();
+  renderAll();
+}
+
+function openConfirmDeletePettyCash(x){
+  openModal({
+    title: 'Hapus catatan kas ini?', body: `${escapeHtml(x.description)} — ${rupiah(x.amount)}`,
+    confirmLabel: 'Hapus',
+    onConfirm: async ()=>{
+      const { error } = await sb.from('petty_cash').delete().eq('id', x.id);
+      if(error){ console.error(error); showToast('Gagal menghapus.'); return; }
+      await loadData(); renderAll(); showToast('Catatan kas dihapus.');
+    }
+  });
+}
+
+function exportPettyCashExcel(){
+  const rows = state.pettyCash.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(x=>{
+    const proj = state.projects.find(p=>p.id===x.projectId);
+    return { Tanggal:x.date, Jenis:x.type, Keterangan:x.description, Proyek: proj?proj.name:'', Jumlah:x.amount, Catatan:x.note };
+  });
+  if(!rows.length){ showToast('Belum ada data kas untuk diekspor.'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Petty Cash');
+  XLSX.writeFile(wb, 'riwayat-petty-cash.xlsx');
+  showToast('File Excel diunduh.');
+}
+
+// ===================== INVENTORY =====================
+
+function computeItemStock(itemId){
+  const item = state.inventoryItems.find(i=>i.id===itemId);
+  if(!item) return 0;
+  const delta = state.inventoryMovements.filter(m=>m.itemId===itemId).reduce((s,m)=>{
+    if(m.type==='Pembelian' || m.type==='Retur') return s + m.quantity;
+    if(m.type==='Pemakaian') return s - m.quantity;
+    if(m.type==='Penyesuaian') return s + m.quantity;
+    return s;
+  }, 0);
+  return item.initialStock + delta;
+}
+
+function renderInventoryAll(){
+  renderInventoryItemSelects();
+  renderInventoryStockTable();
+  renderInventoryMovementTable();
+  renderOpnameTable();
+  toggleMovementFields();
+}
+
+function renderInventoryItemSelects(){
+  const opts = state.inventoryItems.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('');
+  const mvItem = document.getElementById('mv-item');
+  const mvFilterItem = document.getElementById('mvfilter-item');
+  if(mvItem) mvItem.innerHTML = opts || '<option value="">Belum ada alat</option>';
+  if(mvFilterItem) mvFilterItem.innerHTML = '<option value="">Semua alat</option>' + opts;
+}
+
+function renderInventoryStockTable(){
+  const body = document.getElementById('invStockTableBody');
+  body.innerHTML = '';
+  document.getElementById('invItemsEmptyMsg').style.display = state.inventoryItems.length ? 'none':'block';
+  state.inventoryItems.forEach(item=>{
+    const stock = computeItemStock(item.id);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.unit)}</td><td class="amount">${stock.toLocaleString('id-ID')}</td>
+      <td class="row-actions"><button class="icon-btn" data-a="del" title="Hapus alat">✕</button></td>`;
+    tr.querySelector('[data-a="del"]').addEventListener('click', ()=>openConfirmDeleteItem(item));
+    body.appendChild(tr);
+  });
+}
+
+async function handleAddInventoryItem(){
+  const name = document.getElementById('inv-name').value.trim();
+  const unit = document.getElementById('inv-unit').value.trim() || 'unit';
+  const initial = parseFloat(document.getElementById('inv-initial').value) || 0;
+  if(!name){ showToast('Nama alat wajib diisi.'); return; }
+  const { error } = await sb.from('inventory_items').insert({ user_id: currentUser.id, name, unit, initial_stock: initial });
+  if(error){ console.error(error); showToast('Gagal menambah alat.'); return; }
+  document.getElementById('inv-name').value = '';
+  document.getElementById('inv-unit').value = 'unit';
+  document.getElementById('inv-initial').value = '0';
+  await loadData(); renderAll();
+  showToast('Alat ditambahkan.');
+}
+
+function openConfirmDeleteItem(item){
+  openModal({
+    title: `Hapus alat "${escapeHtml(item.name)}"?`, body: 'Semua riwayat pergerakan alat ini akan ikut terhapus.',
+    confirmLabel: 'Hapus',
+    onConfirm: async ()=>{
+      const { error } = await sb.from('inventory_items').delete().eq('id', item.id);
+      if(error){ console.error(error); showToast('Gagal menghapus alat.'); return; }
+      await loadData(); renderAll(); showToast('Alat dihapus.');
+    }
+  });
+}
+
+function toggleMovementFields(){
+  const type = document.getElementById('mv-type').value;
+  document.getElementById('mv-project-wrap').style.display = type==='Pemakaian' ? 'block':'none';
+  document.getElementById('mv-vendor-wrap').style.display = type==='Pembelian' ? 'block':'none';
+  document.getElementById('mv-cost-wrap').style.display = type==='Pembelian' ? 'block':'none';
+}
+
+function applyMvFilters(list){
+  const item = document.getElementById('mvfilter-item').value;
+  const type = document.getElementById('mvfilter-type').value;
+  return list.filter(m=>{
+    if(item && m.itemId!==item) return false;
+    if(type && m.type!==type) return false;
+    return true;
+  });
+}
+
+function renderInventoryMovementTable(){
+  const body = document.getElementById('mvTableBody');
+  body.innerHTML = '';
+  let list = state.inventoryMovements.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  list = applyMvFilters(list);
+  document.getElementById('mvEmptyMsg').style.display = list.length ? 'none':'block';
+  list.forEach(m=>{
+    const item = state.inventoryItems.find(i=>i.id===m.itemId);
+    const proj = state.projects.find(p=>p.id===m.projectId);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${formatDateShort(m.date)}</td><td>${item?escapeHtml(item.name):'-'}</td>
+      <td><span class="badge type">${m.type}</span></td>
+      <td class="amount">${m.quantity.toLocaleString('id-ID')}</td>
+      <td>${proj?escapeHtml(proj.name):'-'}</td><td>${escapeHtml(m.vendor)}</td>
+      <td class="amount">${m.cost!=null ? rupiah(m.cost) : '-'}</td>
+      <td class="row-actions"><button class="icon-btn" data-a="del" title="Hapus">✕</button></td>`;
+    tr.querySelector('[data-a="del"]').addEventListener('click', ()=>openConfirmDeleteMovement(m));
+    body.appendChild(tr);
+  });
+}
+
+async function handleSaveMovement(){
+  const itemId = document.getElementById('mv-item').value;
+  const type = document.getElementById('mv-type').value;
+  const date = document.getElementById('mv-date').value || todayISO();
+  const qty = parseFloat(document.getElementById('mv-qty').value);
+  if(!itemId){ showToast('Pilih alatnya dulu (tambah alat kalau belum ada).'); return; }
+  if(!qty || qty<=0){ showToast('Isi jumlahnya dulu.'); return; }
+  if(type==='Pemakaian' && !document.getElementById('mv-project').value){ showToast('Pilih proyek tujuan pemakaian.'); return; }
+  const row = {
+    user_id: currentUser.id, item_id: itemId, date, type, quantity: qty,
+    project_id: type==='Pemakaian' ? document.getElementById('mv-project').value : null,
+    vendor: type==='Pembelian' ? document.getElementById('mv-vendor').value.trim() : null,
+    cost: type==='Pembelian' && document.getElementById('mv-cost').value ? parseFloat(document.getElementById('mv-cost').value) : null,
+    note: document.getElementById('mv-note').value.trim()
+  };
+  const { error } = await sb.from('inventory_movements').insert(row);
+  if(error){ console.error(error); showToast('Gagal menyimpan transaksi alat.'); return; }
+  document.getElementById('mv-qty').value = '';
+  document.getElementById('mv-vendor').value = '';
+  document.getElementById('mv-cost').value = '';
+  document.getElementById('mv-note').value = '';
+  document.getElementById('mv-date').value = todayISO();
+  await loadData(); renderAll();
+  showToast('Transaksi alat disimpan.');
+}
+
+function openConfirmDeleteMovement(m){
+  openModal({
+    title: 'Hapus riwayat ini?', confirmLabel: 'Hapus',
+    onConfirm: async ()=>{
+      const { error } = await sb.from('inventory_movements').delete().eq('id', m.id);
+      if(error){ console.error(error); showToast('Gagal menghapus.'); return; }
+      await loadData(); renderAll(); showToast('Riwayat dihapus.');
+    }
+  });
+}
+
+function exportInventoryExcel(){
+  if(!state.inventoryItems.length){ showToast('Belum ada alat untuk diekspor.'); return; }
+  const stockRows = state.inventoryItems.map(i=>({ 'Nama Alat':i.name, Satuan:i.unit, 'Stok Sistem': computeItemStock(i.id) }));
+  const mvRows = state.inventoryMovements.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(m=>{
+    const item = state.inventoryItems.find(i=>i.id===m.itemId);
+    const proj = state.projects.find(p=>p.id===m.projectId);
+    return { Tanggal:m.date, Alat: item?item.name:'', Jenis:m.type, Jumlah:m.quantity, Proyek: proj?proj.name:'', Vendor:m.vendor, Biaya:m.cost, Catatan:m.note };
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(stockRows), 'Stok Alat');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mvRows.length?mvRows:[{Info:'Belum ada riwayat'}]), 'Riwayat Pergerakan');
+  XLSX.writeFile(wb, 'inventory-alat.xlsx');
+  showToast('File Excel diunduh.');
+}
+
+function renderOpnameTable(){
+  const body = document.getElementById('opnameTableBody');
+  body.innerHTML = '';
+  document.getElementById('opnameEmptyMsg').style.display = state.inventoryItems.length ? 'none':'block';
+  state.inventoryItems.forEach(item=>{
+    const sysStock = computeItemStock(item.id);
+    const tr = document.createElement('tr');
+    tr.dataset.itemId = item.id;
+    tr.innerHTML = `
+      <td>${escapeHtml(item.name)}</td>
+      <td class="amount">${sysStock.toLocaleString('id-ID')}</td>
+      <td><input type="number" class="opname-input" data-item="${item.id}" data-sys="${sysStock}" placeholder="${sysStock}"></td>
+      <td class="amount opname-diff" data-item="${item.id}"><span class="diff-zero">—</span></td>
+    `;
+    body.appendChild(tr);
+  });
+  document.querySelectorAll('.opname-input').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const sys = parseFloat(inp.dataset.sys);
+      const val = inp.value === '' ? null : parseFloat(inp.value);
+      const diffCell = document.querySelector(`.opname-diff[data-item="${inp.dataset.item}"]`);
+      if(val===null || isNaN(val)){ diffCell.innerHTML = '<span class="diff-zero">—</span>'; return; }
+      const diff = val - sys;
+      const cls = diff>0 ? 'diff-pos' : (diff<0 ? 'diff-neg':'diff-zero');
+      diffCell.innerHTML = `<span class="${cls}">${diff>0?'+':''}${diff.toLocaleString('id-ID')}</span>`;
     });
   });
 }
+
+function getOpnameRows(){
+  return state.inventoryItems.map(item=>{
+    const inp = document.querySelector(`.opname-input[data-item="${item.id}"]`);
+    const sys = computeItemStock(item.id);
+    const physicalRaw = inp ? inp.value : '';
+    const physical = physicalRaw === '' ? null : parseFloat(physicalRaw);
+    return { item, sys, physical, diff: physical===null ? null : (physical - sys) };
+  });
+}
+
+function downloadOpnameExcel(){
+  const rows = getOpnameRows();
+  if(!rows.length){ showToast('Belum ada alat untuk di-opname.'); return; }
+  const excelRows = rows.map(r=>({
+    'Nama Alat': r.item.name, Satuan: r.item.unit, 'Stok Sistem': r.sys,
+    'Stok Fisik': r.physical===null ? '' : r.physical,
+    'Selisih': r.diff===null ? '' : r.diff
+  }));
+  const ws = XLSX.utils.json_to_sheet(excelRows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Stock Opname');
+  XLSX.writeFile(wb, `stock-opname-${todayISO()}.xlsx`);
+  showToast('File Excel diunduh.');
+}
+
+async function handleSaveOpname(){
+  const rows = getOpnameRows().filter(r=>r.physical!==null && r.diff!==0);
+  if(!rows.length){ showToast('Isi minimal satu stok fisik yang beda dari sistem dulu.'); return; }
+  const inserts = rows.map(r=>({
+    user_id: currentUser.id, item_id: r.item.id, date: todayISO(), type: 'Penyesuaian',
+    quantity: r.diff, note: `Hasil stock opname ${formatDateShort(todayISO())}`
+  }));
+  const { error } = await sb.from('inventory_movements').insert(inserts);
+  if(error){ console.error(error); showToast('Gagal menyimpan penyesuaian.'); return; }
+  await loadData(); renderAll();
+  showToast(`Penyesuaian stok untuk ${rows.length} alat disimpan.`);
+}
+
+// ===================== AUTH & STARTUP =====================
 
 async function startApp(){
   document.getElementById('authGate').style.display = 'none';
   document.getElementById('appRoot').style.display = 'grid';
   document.getElementById('userEmailLabel').textContent = currentUser.email;
   await loadData();
-  resetForm();
+  resetTxForm();
+  resetExpForm();
+  resetPcForm();
+  document.getElementById('mv-date').value = todayISO();
   renderAll();
 }
 
 async function initAuth(){
   const { data: { session } } = await sb.auth.getSession();
-  if(session && session.user){
-    currentUser = session.user;
-    await startApp();
-  }
+  if(session && session.user){ currentUser = session.user; await startApp(); }
 
   sb.auth.onAuthStateChange(async (event, session) => {
-    if(session && session.user){
-      currentUser = session.user;
-      await startApp();
-    } else if(event === 'SIGNED_OUT'){
+    if(session && session.user){ currentUser = session.user; await startApp(); }
+    else if(event === 'SIGNED_OUT'){
       currentUser = null;
-      state = { projects: [], transactions: [] };
+      state = { projects:[], transactions:[], expenses:[], pettyCash:[], inventoryItems:[], inventoryMovements:[] };
       activeProjectId = null;
       document.getElementById('appRoot').style.display = 'none';
       document.getElementById('authGate').style.display = 'flex';
@@ -1084,49 +1836,79 @@ async function initAuth(){
     const msg = document.getElementById('authMsg');
     if(!email){ msg.textContent = 'Masukkan email dulu ya.'; return; }
     msg.textContent = 'Mengirim link login...';
-    const { error } = await sb.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.href }
-    });
-    if(error){
-      console.error(error);
-      msg.textContent = 'Gagal mengirim link. Coba lagi.';
-    } else {
-      msg.textContent = 'Link login sudah dikirim — cek email kamu (termasuk folder spam).';
-    }
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
+    msg.textContent = error ? 'Gagal mengirim link. Coba lagi.' : 'Link login sudah dikirim — cek email kamu (termasuk folder spam).';
+    if(error) console.error(error);
   });
 
-  document.getElementById('logoutBtn').addEventListener('click', async ()=>{
-    await sb.auth.signOut();
-  });
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); });
 }
 
 function setupAppEvents(){
   setupTabs();
   document.getElementById('addProjectBtn').addEventListener('click', openAddProjectModal);
+
+  // transaksi
   document.getElementById('saveTransactionBtn').addEventListener('click', handleSaveTransaction);
-  document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
-  document.getElementById('filter-month').addEventListener('change', renderTable);
-  document.getElementById('filter-category').addEventListener('change', renderTable);
-  document.getElementById('filter-status').addEventListener('change', renderTable);
+  document.getElementById('cancelEditBtn').addEventListener('click', resetTxForm);
+  document.getElementById('filter-month').addEventListener('change', renderTxTable);
+  document.getElementById('filter-category').addEventListener('change', renderTxTable);
+  document.getElementById('filter-status').addEventListener('change', renderTxTable);
   document.getElementById('clearFilterBtn').addEventListener('click', ()=>{
     document.getElementById('filter-month').value='';
     document.getElementById('filter-category').value='';
     document.getElementById('filter-status').value='';
-    renderTable();
+    renderTxTable();
   });
+
+  // pengeluaran
+  document.getElementById('saveExpenseBtn').addEventListener('click', handleSaveExpense);
+  document.getElementById('cancelExpenseEditBtn').addEventListener('click', resetExpForm);
+  document.getElementById('exfilter-month').addEventListener('change', renderExpTable);
+  document.getElementById('exfilter-category').addEventListener('change', renderExpTable);
+  document.getElementById('exClearFilterBtn').addEventListener('click', ()=>{
+    document.getElementById('exfilter-month').value='';
+    document.getElementById('exfilter-category').value='';
+    renderExpTable();
+  });
+
+  // ringkasan
   document.getElementById('summary-month').addEventListener('change', renderSummary);
   document.getElementById('clearSummaryFilterBtn').addEventListener('click', ()=>{
-    document.getElementById('summary-month').value='';
-    renderSummary();
+    document.getElementById('summary-month').value=''; renderSummary();
   });
-  document.getElementById('exportSummaryPdf').addEventListener('click', exportSummaryPdf);
-  document.getElementById('exportListPdf').addEventListener('click', exportListPdf);
+  document.getElementById('openDownloadModalBtn').addEventListener('click', openDownloadModal);
+
+  // petty cash
+  document.getElementById('savePettyCashBtn').addEventListener('click', handleSavePettyCash);
+  document.getElementById('cancelPcEditBtn').addEventListener('click', resetPcForm);
+  document.getElementById('pcfilter-month').addEventListener('change', renderPettyCash);
+  document.getElementById('pcfilter-type').addEventListener('change', renderPettyCash);
+  document.getElementById('pcClearFilterBtn').addEventListener('click', ()=>{
+    document.getElementById('pcfilter-month').value='';
+    document.getElementById('pcfilter-type').value='';
+    renderPettyCash();
+  });
+  document.getElementById('exportPettyCashExcel').addEventListener('click', exportPettyCashExcel);
+
+  // inventory
+  document.getElementById('addInventoryItemBtn').addEventListener('click', handleAddInventoryItem);
+  document.getElementById('mv-type').addEventListener('change', toggleMovementFields);
+  document.getElementById('saveMovementBtn').addEventListener('click', handleSaveMovement);
+  document.getElementById('mvfilter-item').addEventListener('change', renderInventoryMovementTable);
+  document.getElementById('mvfilter-type').addEventListener('change', renderInventoryMovementTable);
+  document.getElementById('mvClearFilterBtn').addEventListener('click', ()=>{
+    document.getElementById('mvfilter-item').value='';
+    document.getElementById('mvfilter-type').value='';
+    renderInventoryMovementTable();
+  });
+  document.getElementById('exportInventoryExcel').addEventListener('click', exportInventoryExcel);
+  document.getElementById('downloadOpnameExcel').addEventListener('click', downloadOpnameExcel);
+  document.getElementById('saveOpnameBtn').addEventListener('click', handleSaveOpname);
 }
 
 setupAppEvents();
 initAuth();
 </script>
 </body>
-
 </html>
