@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Buku Nota — Catatan Transaksi Proyek</title>
+<title>Buku Nota — Keuangan & Proyek</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -328,7 +328,7 @@
   <div class="sidebar">
     <div>
       <p class="brand">Buku Nota</p>
-      <p class="brand-sub">Catatan transaksi proyek kolam</p>
+      <p class="brand-sub">Keuangan & transaksi proyek</p>
     </div>
     <p class="nav-label">PROYEK</p>
     <ul class="project-list" id="projectList"></ul>
@@ -348,16 +348,16 @@
       </div>
       <div class="stamp">
         <div id="todayDate"></div>
-        <div>Buku Nota v2</div>
+        <div>Buku Nota v3 — One File</div>
       </div>
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" data-tab="input">Transaksi</button>
-      <button class="tab-btn" data-tab="pengeluaran">Pengeluaran</button>
-      <button class="tab-btn" data-tab="ringkasan">Ringkasan Proyek</button>
-      <button class="tab-btn" data-tab="pettycash">Petty Cash</button>
-      <button class="tab-btn" data-tab="inventory">Inventory</button>
+      <button class="tab-btn active" data-tab="input">Biaya Proyek</button>
+      <button class="tab-btn" data-tab="pengeluaran">Expenses General</button>
+      <button class="tab-btn" data-tab="ringkasan">Keuangan Proyek</button>
+      <button class="tab-btn" data-tab="pettycash">Petty Cash General</button>
+      <button class="tab-btn" data-tab="inventory">Inventory General</button>
     </div>
 
     <div id="tabContent">
@@ -420,6 +420,10 @@
           </div>
 
           <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;">
+              <h2 style="margin:0;">Keuangan Proyek</h2>
+              <button class="btn secondary small" id="editProjectQuoteBtn">Edit Quote</button>
+            </div>
             <div class="filters">
               <div class="field">
                 <label for="filter-month">Bulan</label>
@@ -465,13 +469,11 @@
 
       <!-- PENGELUARAN -->
       <div class="tab-panel" data-panel="pengeluaran">
-        <div id="ex-noProjectMsg" class="card" style="display:none;">
-          <p style="margin:0;color:var(--muted);">Tambahkan proyek dulu di sebelah kiri sebelum mencatat pengeluaran.</p>
-        </div>
+        <div id="ex-noProjectMsg" class="card" style="display:none;"></div>
         <div id="ex-content">
           <div class="card">
             <h2 id="expFormTitle">Catat pengeluaran baru</h2>
-            <p class="hint">Buat biaya operasional non-material — transport, konsumsi, perizinan, dsb.</p>
+            <p class="hint">Biaya operasional umum — tidak dikaitkan ke proyek tertentu.</p>
             <div class="form-grid">
               <div>
                 <label for="e-date">Tanggal</label>
@@ -553,10 +555,10 @@
         </div>
       </div>
 
-      <!-- RINGKASAN PROYEK -->
+      <!-- KEUANGAN PROYEK -->
       <div class="tab-panel" data-panel="ringkasan">
         <div id="rk-noProjectMsg" class="card" style="display:none;">
-          <p style="margin:0;color:var(--muted);">Pilih proyek dulu buat lihat ringkasannya.</p>
+          <p style="margin:0;color:var(--muted);">Pilih proyek dulu buat melihat quote, DP, pembayaran, biaya, dan saldo proyek.</p>
         </div>
         <div id="rk-content">
           <div class="card">
@@ -568,32 +570,56 @@
               <button class="btn secondary small" id="clearSummaryFilterBtn">Semua periode</button>
             </div>
             <div class="summary-grid">
-              <div class="stat">
-                <div class="label">Total transaksi (material)</div>
-                <div class="value" id="stat-total">Rp 0</div>
-              </div>
-              <div class="stat">
-                <div class="label">Total pengeluaran</div>
-                <div class="value" id="stat-expense">Rp 0</div>
-              </div>
-              <div class="stat">
-                <div class="label">Total keseluruhan</div>
-                <div class="value" id="stat-grand">Rp 0</div>
-              </div>
-              <div class="stat">
-                <div class="label">Belum lunas</div>
-                <div class="value warn" id="stat-unpaid">Rp 0</div>
-              </div>
+              <div class="stat"><div class="label">Nilai Quote / Kontrak</div><div class="value" id="stat-quote">Rp 0</div></div>
+              <div class="stat"><div class="label">Uang Masuk / Credit</div><div class="value ok" id="stat-paid">Rp 0</div></div>
+              <div class="stat"><div class="label">Sisa Tagihan</div><div class="value warn" id="stat-outstanding">Rp 0</div></div>
+              <div class="stat"><div class="label">Biaya Proyek / Debit</div><div class="value warn" id="stat-project-cost">Rp 0</div></div>
             </div>
-            <h2>Per kategori (transaksi)</h2>
-            <div id="categoryBars"></div>
-            <h2 class="sub">Per vendor (transaksi)</h2>
-            <div id="vendorBars"></div>
-            <h2 class="sub">Per kategori (pengeluaran)</h2>
-            <div id="expCategoryBars"></div>
+            <div class="summary-grid">
+              <div class="stat"><div class="label">Saldo Proyek (Credit − Debit)</div><div class="value" id="stat-project-balance">Rp 0</div></div>
+              <div class="stat"><div class="label">DP / Termin aktif</div><div class="value" id="stat-last-payment">Rp 0</div></div>
+              <div class="stat"><div class="label">Pembayaran belum tercatat</div><div class="value warn" id="stat-payment-gap">Rp 0</div></div>
+              <div class="stat"><div class="label">Margin berdasarkan kas</div><div class="value" id="stat-margin">Rp 0</div></div>
+            </div>
           </div>
+
+          <div class="card">
+            <h2>Catat uang masuk proyek</h2>
+            <p class="hint">Masukkan setiap DP, termin, atau pelunasan. Semua pembayaran otomatis menjadi Credit untuk proyek aktif.</p>
+            <div class="form-grid">
+              <div><label for="pp-date">Tanggal</label><input type="date" id="pp-date"></div>
+              <div><label for="pp-type">Jenis</label>
+                <select id="pp-type"><option>DP</option><option>Termin</option><option>Pelunasan</option><option>Lain-lain</option></select>
+              </div>
+              <div><label for="pp-amount">Jumlah (Rp)</label><input type="number" id="pp-amount" min="0" placeholder="0"></div>
+              <div><label for="pp-method">Metode</label>
+                <select id="pp-method"><option>Transfer</option><option>Cash</option><option>QRIS</option><option>Lain-lain</option></select>
+              </div>
+              <div><label for="pp-ref">No. Ref / Bukti</label><input type="text" id="pp-ref" placeholder="mis. TRF-001"></div>
+              <div><label for="pp-note">Catatan</label><input type="text" id="pp-note" placeholder="mis. DP 50%"></div>
+            </div>
+            <div style="margin-top:16px;"><button class="btn" id="saveProjectPaymentBtn">Simpan uang masuk</button></div>
+          </div>
+
+          <div class="card">
+            <h2>Ledger Proyek — Debit / Credit</h2>
+            <div style="overflow-x:auto;">
+              <table>
+                <thead><tr><th>Tanggal</th><th>Jenis</th><th>Kategori</th><th>Keterangan</th><th class="amount">Debit</th><th class="amount">Credit</th><th>Status</th><th></th></tr></thead>
+                <tbody id="projectLedgerBody"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="projectLedgerEmpty" style="display:none;">Belum ada transaksi keuangan proyek.</div>
+          </div>
+
+          <div class="card">
+            <h2>Rincian biaya proyek</h2>
+            <h2 class="sub">Per kategori</h2><div id="categoryBars"></div>
+            <h2 class="sub">Per vendor</h2><div id="vendorBars"></div>
+          </div>
+
           <div class="toolbar">
-            <button class="btn secondary" id="openDownloadModalBtn">Unduh Laporan</button>
+            <button class="btn secondary" id="openDownloadModalBtn">Unduh Laporan Proyek</button>
           </div>
         </div>
       </div>
@@ -628,12 +654,7 @@
               <label for="pc-amount">Jumlah (Rp)</label>
               <input type="number" id="pc-amount" placeholder="0" min="0">
             </div>
-            <div>
-              <label for="pc-project">Untuk proyek (opsional)</label>
-              <select id="pc-project">
-                <option value="">-</option>
-              </select>
-            </div>
+
             <div class="full">
               <label for="pc-note">Catatan tambahan (opsional)</label>
               <textarea id="pc-note" placeholder="Catatan bebas..."></textarea>
@@ -664,7 +685,7 @@
           <div style="overflow-x:auto;">
             <table>
               <thead>
-                <tr><th>Tanggal</th><th>Jenis</th><th>Keterangan</th><th>Proyek</th><th class="amount">Jumlah</th><th></th></tr>
+                <tr><th>Tanggal</th><th>Jenis</th><th>Keterangan</th><th class="amount">Jumlah</th><th></th></tr>
               </thead>
               <tbody id="pcTableBody"></tbody>
             </table>
@@ -735,7 +756,7 @@
               <input type="number" id="mv-qty" placeholder="0" min="0">
             </div>
             <div id="mv-project-wrap">
-              <label for="mv-project">Untuk proyek</label>
+              <label for="mv-project">Untuk proyek (opsional)</label>
               <select id="mv-project"><option value="">-</option></select>
             </div>
             <div id="mv-vendor-wrap">
@@ -818,7 +839,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
 
 let state = {
-  projects: [], transactions: [], expenses: [],
+  projects: [], transactions: [], expenses: [], projectPayments: [],
   pettyCash: [], inventoryItems: [], inventoryMovements: []
 };
 let activeProjectId = null;
@@ -875,11 +896,39 @@ async function loadData(){
   const err = e1||e2||e3||e4||e5||e6;
   if(err){ console.error(err); showToast('Gagal memuat sebagian data dari Supabase.'); }
 
-  state.projects = (projects||[]).map(p=>({ id:p.id, name:p.name, client:p.client||'', location:p.location||'', createdAt:p.created_at }));
+  // Backward compatibility: if the optional project_payments table already exists
+  // from an older version, keep showing those records too. Fresh installs do not need it.
+  let legacyPayments = [];
+  try {
+    const legacy = await sb.from('project_payments').select('*').order('date', { ascending:false });
+    if(!legacy.error) legacyPayments = legacy.data || [];
+  } catch(e) { /* table may not exist; that is expected for the one-file version */ }
+
   state.transactions = (transactions||[]).map(t=>({
-    id:t.id, projectId:t.project_id, date:t.date, category:t.category, vendor:t.vendor,
-    amount:Number(t.amount), description:t.description, status:t.status, ref:t.ref||'', note:t.note||''
+    id:t.id, projectId:t.project_id, date:t.date, category:t.category, vendor:t.vendor||'',
+    amount:Number(t.amount), description:t.description||'', status:t.status||'', ref:t.ref||'', note:t.note||''
   }));
+
+  // One-file storage: quote and project payments are stored as special rows
+  // inside the existing `transactions` table, so no SQL migration is required.
+  state.projectPayments = state.transactions.filter(t=>t.vendor==='__PAYMENT__').map(t=>{
+    const parts=(t.ref||'').split('|');
+    return {
+      id:t.id, projectId:t.projectId, date:t.date, type:t.status||'DP', amount:t.amount,
+      method:parts[1]||'Transfer', reference:parts.slice(2).join('|')||'', note:t.note||'', source:'tx'
+    };
+  });
+  legacyPayments.forEach(x=>state.projectPayments.push({
+    id:x.id, projectId:x.project_id, date:x.date, type:x.type||'DP', amount:Number(x.amount),
+    method:x.method||'Transfer', reference:x.reference||'', note:x.note||'', source:'legacy'
+  }));
+
+  state.projects = (projects||[]).map(p=>({ id:p.id, name:p.name, client:p.client||'', location:p.location||'', quoteAmount:Number(p.quote_amount||0), createdAt:p.created_at }));
+  state.projects.forEach(p=>{
+    const quotes=state.transactions.filter(t=>t.projectId===p.id && t.vendor==='__QUOTE__');
+    if(quotes.length) p.quoteAmount=quotes.slice().sort((a,b)=>b.date.localeCompare(a.date))[0].amount;
+  });
+
   state.expenses = (expenses||[]).map(x=>({
     id:x.id, projectId:x.project_id, date:x.date, category:x.category, description:x.description,
     amount:Number(x.amount), status:x.status, party:x.party||'', note:x.note||''
@@ -896,14 +945,12 @@ async function loadData(){
     projectId:x.project_id||'', vendor:x.vendor||'', cost:x.cost!=null?Number(x.cost):null, note:x.note||''
   }));
 
-  if(state.projects.length && !activeProjectId){
-    activeProjectId = state.projects[0].id;
-  }
+  if(state.projects.length && !activeProjectId) activeProjectId=state.projects[0].id;
 }
-
 function getActiveProject(){ return state.projects.find(p=>p.id===activeProjectId); }
-function getProjectTransactions(){ return state.transactions.filter(t=>t.projectId===activeProjectId); }
-function getProjectExpenses(){ return state.expenses.filter(x=>x.projectId===activeProjectId); }
+function getProjectTransactions(){ return state.transactions.filter(t=>t.projectId===activeProjectId && t.vendor!=='__PAYMENT__' && t.vendor!=='__QUOTE__'); }
+function getProjectExpenses(){ return state.expenses; }
+function getProjectPayments(){ return state.projectPayments.filter(x=>x.projectId===activeProjectId); }
 
 // ===================== RENDER: SHELL =====================
 
@@ -920,14 +967,12 @@ function renderProjectList(){
   });
   document.getElementById('totalProjectsFoot').textContent = state.projects.length + ' proyek tersimpan';
 
-  // keep project dropdowns (petty cash, inventory movement) in sync
-  const projOptions = ['<option value="">-</option>'].concat(
-    state.projects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`)
-  ).join('');
-  const pcSel = document.getElementById('pc-project');
-  const mvSel = document.getElementById('mv-project');
-  if(pcSel) pcSel.innerHTML = projOptions;
-  if(mvSel) mvSel.innerHTML = projOptions;
+  const mvSel=document.getElementById('mv-project');
+  if(mvSel){
+    const current=mvSel.value;
+    mvSel.innerHTML='<option value="">-</option>'+state.projects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    if(state.projects.some(p=>p.id===current)) mvSel.value=current;
+  }
 }
 
 function renderTitleBlock(){
@@ -937,6 +982,7 @@ function renderTitleBlock(){
   const bits = [];
   if(proj){
     if(proj.client) bits.push(`<span>Klien: <b>${escapeHtml(proj.client)}</b></span>`);
+    bits.push(`<span>Quote: <b>${rupiah(proj.quoteAmount||0)}</b></span>`);
     if(proj.location) bits.push(`<span>Lokasi: <b>${escapeHtml(proj.location)}</b></span>`);
     bits.push(`<span>Total nota: <b>${getProjectTransactions().length}</b></span>`);
   }
@@ -945,8 +991,8 @@ function renderTitleBlock(){
   const hasProj = !!proj;
   document.getElementById('tx-noProjectMsg').style.display = hasProj ? 'none':'block';
   document.getElementById('tx-content').style.display = hasProj ? 'block':'none';
-  document.getElementById('ex-noProjectMsg').style.display = hasProj ? 'none':'block';
-  document.getElementById('ex-content').style.display = hasProj ? 'block':'none';
+  document.getElementById('ex-noProjectMsg').style.display = 'none';
+  document.getElementById('ex-content').style.display = 'block';
   document.getElementById('rk-noProjectMsg').style.display = hasProj ? 'none':'block';
   document.getElementById('rk-content').style.display = hasProj ? 'block':'none';
 }
@@ -1009,11 +1055,13 @@ function openAddProjectModal(){
         <div><label>Nama proyek</label><input type="text" id="np-name" placeholder="mis. Villa Kayu Putih - Kolam Renang"></div>
         <div><label>Klien (opsional)</label><input type="text" id="np-client" placeholder="mis. Pak Dody"></div>
         <div><label>Lokasi (opsional)</label><input type="text" id="np-location" placeholder="mis. Padang Sambian, Denpasar"></div>
+        <div><label>Nilai Quote / Kontrak (Rp)</label><input type="number" id="np-quote" placeholder="mis. 50000000" min="0"></div>
       </div>
     `,
     onSubmit: async ()=>{
       const name = document.getElementById('np-name').value.trim();
       if(!name){ showToast('Nama proyek wajib diisi.'); return false; }
+      const quote = parseFloat(document.getElementById('np-quote').value) || 0;
       const { data, error } = await sb.from('projects').insert({
         user_id: currentUser.id, name,
         client: document.getElementById('np-client').value.trim(),
@@ -1021,17 +1069,48 @@ function openAddProjectModal(){
       }).select().single();
       if(error){ console.error(error); showToast('Gagal menambah proyek.'); return false; }
       activeProjectId = data.id;
-      await loadData();
-      renderAll();
-      showToast('Proyek ditambahkan.');
+      if(quote>0){
+        const q={user_id:currentUser.id,project_id:data.id,date:todayISO(),category:'__QUOTE__',vendor:'__QUOTE__',amount:quote,description:'Nilai Quote / Kontrak',status:'Quote',ref:'QUOTE',note:''};
+        const qr=await sb.from('transactions').insert(q);
+        if(qr.error){ console.error(qr.error); showToast('Proyek dibuat, tetapi quote gagal disimpan.'); }
+      }
+      await loadData(); renderAll(); showToast('Proyek ditambahkan.');
     }
   });
+}
+
+function openEditProjectQuoteModal(){
+  const proj=getActiveProject();
+  if(!proj){showToast('Pilih proyek dulu.');return;}
+  openModal({title:'Edit detail proyek',confirmLabel:'Simpan perubahan',formHtml:`
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div><label>Nama proyek</label><input type="text" id="ep-name" value="${escapeHtml(proj.name)}"></div>
+      <div><label>Klien</label><input type="text" id="ep-client" value="${escapeHtml(proj.client||'')}"></div>
+      <div><label>Lokasi</label><input type="text" id="ep-location" value="${escapeHtml(proj.location||'')}"></div>
+      <div><label>Nilai Quote / Kontrak (Rp)</label><input type="number" id="ep-quote" min="0" value="${proj.quoteAmount||0}"></div>
+    </div>`,onSubmit:async()=>{
+      const name=document.getElementById('ep-name').value.trim();
+      if(!name){showToast('Nama proyek wajib diisi.');return false;}
+      const quote=parseFloat(document.getElementById('ep-quote').value)||0;
+      const {error}=await sb.from('projects').update({name,client:document.getElementById('ep-client').value.trim(),location:document.getElementById('ep-location').value.trim()}).eq('id',proj.id);
+      if(error){console.error(error);showToast('Gagal memperbarui proyek.');return false;}
+      const existing=state.transactions.filter(t=>t.projectId===proj.id && t.vendor==='__QUOTE__').sort((a,b)=>b.date.localeCompare(a.date));
+      if(existing.length){
+        const qr=await sb.from('transactions').update({date:todayISO(),amount:quote,category:'__QUOTE__',vendor:'__QUOTE__',description:'Nilai Quote / Kontrak',status:'Quote',ref:'QUOTE',note:''}).eq('id',existing[0].id);
+        if(qr.error){console.error(qr.error);showToast('Detail proyek tersimpan, tetapi quote gagal diperbarui.');return false;}
+        if(existing.length>1){ await sb.from('transactions').delete().in('id',existing.slice(1).map(x=>x.id)); }
+      } else if(quote>0){
+        const qr=await sb.from('transactions').insert({user_id:currentUser.id,project_id:proj.id,date:todayISO(),category:'__QUOTE__',vendor:'__QUOTE__',amount:quote,description:'Nilai Quote / Kontrak',status:'Quote',ref:'QUOTE',note:''});
+        if(qr.error){console.error(qr.error);showToast('Detail proyek tersimpan, tetapi quote gagal disimpan.');return false;}
+      }
+      await loadData();renderAll();showToast('Detail proyek diperbarui.');
+    }});
 }
 
 function openConfirmDeleteProject(p){
   openModal({
     title: `Hapus proyek "${escapeHtml(p.name)}"?`,
-    body: 'Semua transaksi & pengeluaran di proyek ini akan ikut terhapus.',
+    body: 'Semua biaya proyek & pembayaran yang terhubung ke proyek ini akan ikut terhapus. Expenses, petty cash, dan inventory general tidak terikat ke proyek.',
     confirmLabel: 'Hapus proyek',
     onConfirm: async ()=>{
       const { error } = await sb.from('projects').delete().eq('id', p.id);
@@ -1164,7 +1243,7 @@ function applyExpFilters(list){
 function renderExpTable(){
   const body = document.getElementById('expTableBody');
   body.innerHTML = '';
-  let list = getProjectExpenses().slice().sort((a,b)=>b.date.localeCompare(a.date));
+  let list = state.expenses.slice().sort((a,b)=>b.date.localeCompare(a.date));
   list = applyExpFilters(list);
   document.getElementById('expEmptyMsg').style.display = list.length ? 'none':'block';
   list.forEach(x=>{
@@ -1212,13 +1291,12 @@ function resetExpForm(){
 }
 
 async function handleSaveExpense(){
-  if(!activeProjectId){ showToast('Pilih atau tambah proyek dulu.'); return; }
   const date = document.getElementById('e-date').value || todayISO();
   const description = document.getElementById('e-desc').value.trim();
   const amount = parseFloat(document.getElementById('e-amount').value);
   if(!description || !amount || amount<=0){ showToast('Lengkapi deskripsi dan jumlah dulu ya.'); return; }
   const row = {
-    project_id: activeProjectId, user_id: currentUser.id, date,
+    project_id: null, user_id: currentUser.id, date,
     category: document.getElementById('e-category').value, description,
     party: document.getElementById('e-party').value.trim(), amount,
     status: document.getElementById('e-status').value,
@@ -1246,11 +1324,11 @@ function openConfirmDeleteExpense(x){
   });
 }
 
-// ===================== RINGKASAN PROYEK =====================
+// ===================== KEUANGAN PROYEK =====================
 
 function groupSum(list, key){
   const map = {};
-  list.forEach(t=>{ map[t[key]] = (map[t[key]]||0) + t.amount; });
+  list.forEach(t=>{ map[t[key] || 'Lain-lain'] = (map[t[key] || 'Lain-lain']||0) + t.amount; });
   return Object.entries(map).sort((a,b)=>b[1]-a[1]);
 }
 
@@ -1271,29 +1349,97 @@ function renderBarBreakdown(containerId, entries){
 function getSummaryFilteredData(){
   const month = document.getElementById('summary-month').value;
   let tx = getProjectTransactions();
-  let ex = getProjectExpenses();
+  let payments = getProjectPayments();
   if(month){
     tx = tx.filter(t=>t.date.slice(0,7)===month);
-    ex = ex.filter(x=>x.date.slice(0,7)===month);
+    payments = payments.filter(p=>p.date.slice(0,7)===month);
   }
-  return { tx, ex, month };
+  return { tx, payments, month };
+}
+
+function renderProjectLedger(tx, payments){
+  const body = document.getElementById('projectLedgerBody');
+  body.innerHTML = '';
+  const rows = [
+    ...tx.map(t=>({id:t.id,date:t.date,kind:'Biaya Proyek',category:t.category,description:(t.vendor ? t.vendor+' — ' : '')+t.description,debit:t.amount,credit:0,status:t.status,source:'tx',raw:t})),
+    ...payments.map(p=>({id:p.id,date:p.date,kind:p.type,category:'Pembayaran',description:(p.method ? p.method+' — ' : '')+(p.reference || 'Uang masuk proyek'),debit:0,credit:p.amount,status:'Diterima',source:'payment',raw:p}))
+  ].sort((a,b)=>b.date.localeCompare(a.date));
+
+  document.getElementById('projectLedgerEmpty').style.display = rows.length ? 'none':'block';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${formatDateShort(r.date)}</td>
+      <td><span class="badge ${r.credit ? 'masuk':'keluar'}">${escapeHtml(r.kind)}</span></td>
+      <td>${escapeHtml(r.category)}</td><td>${escapeHtml(r.description)}</td>
+      <td class="amount">${r.debit ? rupiah(r.debit) : '-'}</td>
+      <td class="amount">${r.credit ? rupiah(r.credit) : '-'}</td>
+      <td>${escapeHtml(r.status)}</td>
+      <td class="row-actions"><button class="icon-btn" data-a="del" title="Hapus">✕</button></td>`;
+    tr.querySelector('[data-a="del"]').addEventListener('click', ()=>{
+      if(r.source==='tx') openConfirmDeleteTx(r.raw);
+      else openConfirmDeletePayment(r.raw);
+    });
+    body.appendChild(tr);
+  });
 }
 
 function renderSummary(){
-  const { tx, ex } = getSummaryFilteredData();
-  const totalTx = tx.reduce((s,t)=>s+t.amount,0);
-  const totalEx = ex.reduce((s,x)=>s+x.amount,0);
-  const unpaid = tx.filter(t=>t.status!=='Lunas').reduce((s,t)=>s+t.amount,0)
-               + ex.filter(x=>x.status!=='Lunas').reduce((s,x)=>s+x.amount,0);
-  document.getElementById('stat-total').textContent = rupiah(totalTx);
-  document.getElementById('stat-expense').textContent = rupiah(totalEx);
-  document.getElementById('stat-grand').textContent = rupiah(totalTx+totalEx);
-  document.getElementById('stat-unpaid').textContent = rupiah(unpaid);
-  renderBarBreakdown('categoryBars', groupSum(tx,'category'));
-  renderBarBreakdown('vendorBars', groupSum(tx,'vendor'));
-  renderBarBreakdown('expCategoryBars', groupSum(ex,'category'));
+  const proj=getActiveProject();
+  if(!proj) return;
+  const {tx,payments}=getSummaryFilteredData();
+  const quote=Number(proj.quoteAmount||0);
+  const paid=payments.reduce((s,p)=>s+p.amount,0);
+  const costs=tx.reduce((s,t)=>s+t.amount,0);
+  const outstanding=Math.max(quote-paid,0);
+  const balance=paid-costs;
+  document.getElementById('stat-quote').textContent=rupiah(quote);
+  document.getElementById('stat-paid').textContent=rupiah(paid);
+  document.getElementById('stat-outstanding').textContent=rupiah(outstanding);
+  document.getElementById('stat-project-cost').textContent=rupiah(costs);
+  document.getElementById('stat-project-balance').textContent=rupiah(balance);
+  document.getElementById('stat-project-balance').className='value '+(balance<0?'warn':'ok');
+  document.getElementById('stat-last-payment').textContent=payments.length?rupiah(payments.slice().sort((a,b)=>b.date.localeCompare(a.date))[0].amount):'Rp 0';
+  document.getElementById('stat-payment-gap').textContent=rupiah(outstanding);
+  document.getElementById('stat-margin').textContent=rupiah(balance);
+  document.getElementById('stat-margin').className='value '+(balance<0?'warn':'ok');
+  renderProjectLedger(tx,payments);
+  renderBarBreakdown('categoryBars',groupSum(tx,'category'));
+  renderBarBreakdown('vendorBars',groupSum(tx,'vendor'));
 }
 
+async function handleSaveProjectPayment(){
+  if(!activeProjectId){showToast('Pilih proyek dulu.');return;}
+  const date=document.getElementById('pp-date').value||todayISO();
+  const amount=parseFloat(document.getElementById('pp-amount').value);
+  if(!amount||amount<=0){showToast('Isi jumlah pembayaran dulu.');return;}
+  const type=document.getElementById('pp-type').value;
+  const method=document.getElementById('pp-method').value;
+  const reference=document.getElementById('pp-ref').value.trim();
+  const row={user_id:currentUser.id,project_id:activeProjectId,date,category:'__PAYMENT__',vendor:'__PAYMENT__',amount,
+    description:type,status:type,ref:`PAYMENT|${method}|${reference}`,note:document.getElementById('pp-note').value.trim()};
+  const {error}=await sb.from('transactions').insert(row);
+  if(error){console.error(error);showToast('Gagal menyimpan uang masuk proyek.');return;}
+  resetProjectPaymentForm(); await loadData(); renderAll(); showToast('Uang masuk proyek disimpan.');
+}
+
+function resetProjectPaymentForm(){
+  document.getElementById('pp-date').value=todayISO();
+  document.getElementById('pp-type').value='DP';
+  document.getElementById('pp-amount').value='';
+  document.getElementById('pp-method').value='Transfer';
+  document.getElementById('pp-ref').value='';
+  document.getElementById('pp-note').value='';
+}
+
+function openConfirmDeletePayment(p){
+  openModal({title:'Hapus pembayaran proyek?',body:`${escapeHtml(p.type)} — ${rupiah(p.amount)}`,confirmLabel:'Hapus',
+    onConfirm:async()=>{
+      const table=p.source==='legacy'?'project_payments':'transactions';
+      const {error}=await sb.from(table).delete().eq('id',p.id);
+      if(error){console.error(error);showToast('Gagal menghapus pembayaran.');return;}
+      await loadData();renderAll();showToast('Pembayaran dihapus.');
+    }});
+}
 function openPdfSafely(doc, filename){
   try{
     const blobUrl = doc.output('bloburl');
@@ -1360,96 +1506,52 @@ function exportListPdf(){
 }
 
 function exportSummaryPdf(){
-  const proj = getActiveProject();
-  if(!proj){ showToast('Pilih proyek dulu.'); return; }
-  const { tx, ex, month } = getSummaryFilteredData();
-  if(!tx.length && !ex.length){ showToast('Tidak ada data untuk periode ini.'); return; }
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'mm', format:'a4' });
-  const pageW = doc.internal.pageSize.getWidth();
-
-  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text('LAPORAN RINGKASAN PROYEK', 14, 16);
-  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(proj.name, 14, 23);
-  if(proj.client) doc.text('Klien: '+proj.client, 14, 28);
-  doc.setFontSize(9);
-  doc.text('Periode: ' + (month ? formatMonthLabel(month) : 'Semua periode'), 14, 33);
-  doc.setTextColor(120);
-  doc.text('Dibuat: '+new Date().toLocaleString('id-ID'), pageW-14, 16, { align:'right' });
-  doc.setTextColor(0);
-
-  const totalTx = tx.reduce((s,t)=>s+t.amount,0);
-  const totalEx = ex.reduce((s,x)=>s+x.amount,0);
-  const unpaid = tx.filter(t=>t.status!=='Lunas').reduce((s,t)=>s+t.amount,0)
-               + ex.filter(x=>x.status!=='Lunas').reduce((s,x)=>s+x.amount,0);
-
-  doc.autoTable({
-    startY:40, theme:'plain', styles:{fontSize:10,cellPadding:1.5},
-    columnStyles:{0:{fontStyle:'bold',cellWidth:60}},
-    body:[
-      ['Total transaksi (material)', rupiah(totalTx)],
-      ['Total pengeluaran', rupiah(totalEx)],
-      ['Total keseluruhan', rupiah(totalTx+totalEx)],
-      ['Belum lunas', rupiah(unpaid)],
-    ],
-    margin:{left:14,right:14}
-  });
-
-  let y = doc.lastAutoTable.finalY + 8;
-  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Rincian Transaksi & Pengeluaran (urut tanggal)', 14, y);
-  y += 4;
-  const combined = [
-    ...tx.map(t=>({ date:t.date, jenis:'Transaksi', kategori:t.category, ket:t.vendor+' — '+t.description, jumlah:t.amount, status:t.status })),
-    ...ex.map(x=>({ date:x.date, jenis:'Pengeluaran', kategori:x.category, ket:x.description+(x.party?' — '+x.party:''), jumlah:x.amount, status:x.status }))
-  ].sort((a,b)=>a.date.localeCompare(b.date));
-  doc.autoTable({
-    startY:y,
-    head:[['Tanggal','Jenis','Kategori','Keterangan','Jumlah','Status']],
-    body: combined.map(r=>[formatDateShort(r.date), r.jenis, r.kategori, r.ket, rupiah(r.jumlah), r.status]),
-    styles:{fontSize:8,cellPadding:2}, headStyles:{fillColor:[28,75,77]},
-    columnStyles:{4:{halign:'right'}}, margin:{left:14,right:14}
-  });
-
-  y = doc.lastAutoTable.finalY + 8;
-  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Per Kategori (Transaksi)', 14, y); y+=4;
-  doc.autoTable({ startY:y, head:[['Kategori','Jumlah']], body: groupSum(tx,'category').map(([k,v])=>[k,rupiah(v)]),
-    styles:{fontSize:9,cellPadding:2}, headStyles:{fillColor:[28,75,77]}, columnStyles:{1:{halign:'right'}}, margin:{left:14,right:14} });
-
-  y = doc.lastAutoTable.finalY + 8;
-  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Per Vendor (Transaksi)', 14, y); y+=4;
-  doc.autoTable({ startY:y, head:[['Vendor','Jumlah']], body: groupSum(tx,'vendor').map(([k,v])=>[k,rupiah(v)]),
-    styles:{fontSize:9,cellPadding:2}, headStyles:{fillColor:[28,75,77]}, columnStyles:{1:{halign:'right'}}, margin:{left:14,right:14} });
-
-  openPdfSafely(doc, `ringkasan-${proj.name.replace(/\s+/g,'-').toLowerCase()}${month?'-'+month:''}.pdf`);
+  const proj=getActiveProject();
+  if(!proj){showToast('Pilih proyek dulu.');return;}
+  const {tx,payments,month}=getSummaryFilteredData();
+  if(!tx.length&&!payments.length){showToast('Tidak ada data untuk periode ini.');return;}
+  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'mm',format:'a4'});
+  const pageW=doc.internal.pageSize.getWidth();
+  const quote=Number(proj.quoteAmount||0), paid=payments.reduce((s,p)=>s+p.amount,0), costs=tx.reduce((s,t)=>s+t.amount,0);
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.text('LAPORAN KEUANGAN PROYEK',14,16);
+  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text(proj.name,14,23);
+  if(proj.client)doc.text('Klien: '+proj.client,14,28);
+  doc.text('Periode: '+(month?formatMonthLabel(month):'Semua periode'),14,33);
+  doc.autoTable({startY:39,theme:'plain',styles:{fontSize:10,cellPadding:1.5},columnStyles:{0:{fontStyle:'bold',cellWidth:60}},
+    body:[['Nilai Quote',rupiah(quote)],['Uang Masuk / Credit',rupiah(paid)],['Sisa Tagihan',rupiah(Math.max(quote-paid,0))],['Biaya Proyek / Debit',rupiah(costs)],['Saldo / Margin Kas',rupiah(paid-costs)]],margin:{left:14,right:14}});
+  let y=doc.lastAutoTable.finalY+8;
+  const combined=[...tx.map(t=>[formatDateShort(t.date),'Debit',t.category,t.vendor+' — '+t.description,rupiah(t.amount),t.status]),
+    ...payments.map(p=>[formatDateShort(p.date),'Credit',p.type,(p.method||'')+' — '+(p.reference||'Pembayaran proyek'),rupiah(p.amount),'Diterima'])].sort((a,b)=>a[0].localeCompare(b[0]));
+  doc.autoTable({startY:y,head:[['Tanggal','Debit/Credit','Kategori','Keterangan','Jumlah','Status']],body:combined,
+    styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[28,75,77]},columnStyles:{4:{halign:'right'}},margin:{left:14,right:14}});
+  openPdfSafely(doc,`keuangan-${proj.name.replace(/\s+/g,'-').toLowerCase()}${month?'-'+month:''}.pdf`);
 }
 
 function exportProjectExcel(){
-  const proj = getActiveProject();
-  if(!proj){ showToast('Pilih proyek dulu.'); return; }
-  const { tx, ex, month } = getSummaryFilteredData();
-  const wb = XLSX.utils.book_new();
-  const txRows = tx.map(t=>({ Tanggal:t.date, Kategori:t.category, Vendor:t.vendor, Deskripsi:t.description, Jumlah:t.amount, Status:t.status, 'No Ref':t.ref, Catatan:t.note }));
-  const exRows = ex.map(x=>({ Tanggal:x.date, Kategori:x.category, Deskripsi:x.description, Pihak:x.party, Jumlah:x.amount, Status:x.status, Catatan:x.note }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txRows.length?txRows:[{Info:'Belum ada transaksi'}]), 'Transaksi');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(exRows.length?exRows:[{Info:'Belum ada pengeluaran'}]), 'Pengeluaran');
-  XLSX.writeFile(wb, `data-${proj.name.replace(/\s+/g,'-').toLowerCase()}${month?'-'+month:''}.xlsx`);
-  showToast('File Excel diunduh.');
+  const proj=getActiveProject(); if(!proj){showToast('Pilih proyek dulu.');return;}
+  const {tx,payments,month}=getSummaryFilteredData();
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Proyek:proj.name,Klien:proj.client,'Nilai Quote':proj.quoteAmount||0,'Total Credit':payments.reduce((s,p)=>s+p.amount,0),'Total Debit':tx.reduce((s,t)=>s+t.amount,0)}]),'Ringkasan');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(tx.map(t=>({Tanggal:t.date,Kategori:t.category,Vendor:t.vendor,Deskripsi:t.description,Debit:t.amount,Status:t.status,'No Ref':t.ref,Catatan:t.note}))), 'Debit');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(payments.map(p=>({Tanggal:p.date,Jenis:p.type,Metode:p.method,Referensi:p.reference,Credit:p.amount,Catatan:p.note}))), 'Credit');
+  XLSX.writeFile(wb,`keuangan-${proj.name.replace(/\s+/g,'-').toLowerCase()}${month?'-'+month:''}.xlsx`);
+  showToast('Laporan Excel diunduh.');
 }
 
 function openDownloadModal(){
   openModal({
-    title: 'Unduh laporan proyek',
+    title: 'Unduh laporan keuangan proyek',
     confirmLabel: 'Unduh',
     formHtml: `
       <div>
         <label class="radio-opt"><input type="radio" name="dl-opt" value="summary" checked>
-          <div><div class="opt-title">Laporan Ringkasan (PDF)</div><div class="opt-desc">Total, breakdown kategori/vendor, dan tabel lengkap transaksi + pengeluaran dengan tanggal.</div></div>
+          <div><div class="opt-title">Laporan Keuangan Proyek (PDF)</div><div class="opt-desc">Quote, DP/termin, Credit, Debit, sisa tagihan, dan ledger proyek.</div></div>
         </label>
         <label class="radio-opt"><input type="radio" name="dl-opt" value="list">
-          <div><div class="opt-title">Daftar Transaksi (PDF)</div><div class="opt-desc">Tabel transaksi material saja, urut tanggal.</div></div>
+          <div><div class="opt-title">Daftar Biaya Proyek (PDF)</div><div class="opt-desc">Tabel biaya proyek, urut tanggal.</div></div>
         </label>
         <label class="radio-opt"><input type="radio" name="dl-opt" value="excel">
-          <div><div class="opt-title">Data Mentah (Excel)</div><div class="opt-desc">Transaksi & pengeluaran dalam 2 sheet, siap diolah lagi.</div></div>
+          <div><div class="opt-title">Keuangan Proyek (Excel)</div><div class="opt-desc">Ringkasan + Debit biaya + Credit pembayaran.</div></div>
         </label>
       </div>
     `,
@@ -1486,13 +1588,11 @@ function renderPettyCash(){
   list = applyPcFilters(list);
   document.getElementById('pcEmptyMsg').style.display = list.length ? 'none':'block';
   list.forEach(x=>{
-    const proj = state.projects.find(p=>p.id===x.projectId);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${formatDateShort(x.date)}</td>
       <td><span class="badge ${x.type==='Masuk'?'masuk':'keluar'}">${x.type}</span></td>
       <td>${escapeHtml(x.description)}</td>
-      <td>${proj?escapeHtml(proj.name):'-'}</td>
       <td class="amount">${rupiah(x.amount)}</td>
       <td class="row-actions">
         <button class="icon-btn" data-a="edit" title="Edit">✎</button>
@@ -1510,7 +1610,6 @@ function startEditPettyCash(x){
   document.getElementById('pc-type').value = x.type;
   document.getElementById('pc-desc').value = x.description;
   document.getElementById('pc-amount').value = x.amount;
-  document.getElementById('pc-project').value = x.projectId || '';
   document.getElementById('pc-note').value = x.note || '';
   document.getElementById('pcFormTitle').textContent = 'Edit catatan kas';
   document.getElementById('cancelPcEditBtn').style.display = 'inline-block';
@@ -1523,7 +1622,6 @@ function resetPcForm(){
   document.getElementById('pc-type').value = 'Masuk';
   document.getElementById('pc-desc').value = '';
   document.getElementById('pc-amount').value = '';
-  document.getElementById('pc-project').value = '';
   document.getElementById('pc-note').value = '';
   document.getElementById('pcFormTitle').textContent = 'Catat kas masuk / keluar';
   document.getElementById('cancelPcEditBtn').style.display = 'none';
@@ -1536,7 +1634,7 @@ async function handleSavePettyCash(){
   if(!description || !amount || amount<=0){ showToast('Lengkapi keterangan dan jumlah dulu ya.'); return; }
   const row = {
     user_id: currentUser.id, date, type: document.getElementById('pc-type').value,
-    amount, description, project_id: document.getElementById('pc-project').value || null,
+    amount, description,
     note: document.getElementById('pc-note').value.trim()
   };
   let error;
@@ -1563,8 +1661,7 @@ function openConfirmDeletePettyCash(x){
 
 function exportPettyCashExcel(){
   const rows = state.pettyCash.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(x=>{
-    const proj = state.projects.find(p=>p.id===x.projectId);
-    return { Tanggal:x.date, Jenis:x.type, Keterangan:x.description, Proyek: proj?proj.name:'', Jumlah:x.amount, Catatan:x.note };
+    return { Tanggal:x.date, Jenis:x.type, Keterangan:x.description, Jumlah:x.amount, Catatan:x.note };
   });
   if(!rows.length){ showToast('Belum ada data kas untuk diekspor.'); return; }
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -1589,6 +1686,8 @@ function computeItemStock(itemId){
 }
 
 function renderInventoryAll(){
+  const mvSel = document.getElementById('mv-project');
+  if(mvSel){ mvSel.innerHTML = '<option value="">-</option>' + state.projects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join(''); }
   renderInventoryItemSelects();
   renderInventoryStockTable();
   renderInventoryMovementTable();
@@ -1690,10 +1789,9 @@ async function handleSaveMovement(){
   const qty = parseFloat(document.getElementById('mv-qty').value);
   if(!itemId){ showToast('Pilih alatnya dulu (tambah alat kalau belum ada).'); return; }
   if(!qty || qty<=0){ showToast('Isi jumlahnya dulu.'); return; }
-  if(type==='Pemakaian' && !document.getElementById('mv-project').value){ showToast('Pilih proyek tujuan pemakaian.'); return; }
   const row = {
     user_id: currentUser.id, item_id: itemId, date, type, quantity: qty,
-    project_id: type==='Pemakaian' ? document.getElementById('mv-project').value : null,
+    project_id: document.getElementById('mv-project').value || null,
     vendor: type==='Pembelian' ? document.getElementById('mv-vendor').value.trim() : null,
     cost: type==='Pembelian' && document.getElementById('mv-cost').value ? parseFloat(document.getElementById('mv-cost').value) : null,
     note: document.getElementById('mv-note').value.trim()
@@ -1812,6 +1910,7 @@ async function startApp(){
   resetTxForm();
   resetExpForm();
   resetPcForm();
+  resetProjectPaymentForm();
   document.getElementById('mv-date').value = todayISO();
   renderAll();
 }
@@ -1824,7 +1923,7 @@ async function initAuth(){
     if(session && session.user){ currentUser = session.user; await startApp(); }
     else if(event === 'SIGNED_OUT'){
       currentUser = null;
-      state = { projects:[], transactions:[], expenses:[], pettyCash:[], inventoryItems:[], inventoryMovements:[] };
+      state = { projects:[], transactions:[], expenses:[], projectPayments:[], pettyCash:[], inventoryItems:[], inventoryMovements:[] };
       activeProjectId = null;
       document.getElementById('appRoot').style.display = 'none';
       document.getElementById('authGate').style.display = 'flex';
@@ -1878,6 +1977,8 @@ function setupAppEvents(){
     document.getElementById('summary-month').value=''; renderSummary();
   });
   document.getElementById('openDownloadModalBtn').addEventListener('click', openDownloadModal);
+  document.getElementById('editProjectQuoteBtn').addEventListener('click', openEditProjectQuoteModal);
+  document.getElementById('saveProjectPaymentBtn').addEventListener('click', handleSaveProjectPayment);
 
   // petty cash
   document.getElementById('savePettyCashBtn').addEventListener('click', handleSavePettyCash);
