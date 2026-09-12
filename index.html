@@ -75,6 +75,20 @@
     letter-spacing:0.4px;
   }
   .project-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;}
+  .side-nav{display:flex;flex-direction:column;gap:4px;margin:0 0 18px;}
+  .side-nav-btn{width:100%;text-align:left;border:1px solid transparent;background:transparent;color:#dfe6df;padding:9px 10px;border-radius:var(--radius);cursor:pointer;font:500 13px 'Space Grotesk',sans-serif;}
+  .side-nav-btn:hover{background:rgba(255,255,255,0.06);}
+  .side-nav-btn.active{background:rgba(255,255,255,0.1);border-left:2px solid var(--sand);color:#fff;font-weight:600;}
+  .project-section-label{font-size:11px;color:#9fc0bd;margin:8px 0 8px;}
+  .maintenance-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+  @media(max-width:900px){.maintenance-kpi{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:520px){.maintenance-kpi{grid-template-columns:1fr;}}
+  .calc-box{border:1px solid var(--line);background:#faf8f2;padding:14px;margin-top:14px;}
+  .calc-row{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:13px;}
+  .calc-row.total{border-top:1px solid var(--line);margin-top:5px;padding-top:10px;font-weight:700;}
+  .profit{color:var(--ok);font-weight:700;}
+  .loss{color:var(--warn);font-weight:700;}
+
   .project-item{
     display:flex;
     align-items:center;
@@ -153,7 +167,7 @@
     white-space:nowrap;
   }
 
-  .tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .tabs{display:none;}
   .tab-btn{
     font-family:'Space Grotesk',sans-serif;
     background:none;border:none;
@@ -330,7 +344,13 @@
       <p class="brand">Buku Nota</p>
       <p class="brand-sub">Keuangan & transaksi proyek</p>
     </div>
-    <p class="nav-label">PROYEK</p>
+    <div class="side-nav" id="sideNav">
+      <button class="side-nav-btn active" data-nav="ringkasan">📊 Dashboard Maintenance</button>
+      <button class="side-nav-btn" data-nav="pengeluaran">💸 Expenses General</button>
+      <button class="side-nav-btn" data-nav="pettycash">💰 Petty Cash General</button>
+      <button class="side-nav-btn" data-nav="inventory">📦 Inventory General</button>
+    </div>
+    <p class="project-section-label">PROYEK</p>
     <ul class="project-list" id="projectList"></ul>
     <button class="add-project" id="addProjectBtn">+ Tambah proyek</button>
     <div class="sidebar-foot">
@@ -562,6 +582,10 @@
         </div>
         <div id="rk-content">
           <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;">
+              <h2 style="margin:0;">Keuangan Proyek</h2>
+              <button class="btn secondary small" id="addProjectCostBtn">+ Tambah Biaya Proyek</button>
+            </div>
             <div class="filters">
               <div class="field">
                 <label for="summary-month">Periode (kosongkan = semua)</label>
@@ -620,6 +644,68 @@
 
           <div class="toolbar">
             <button class="btn secondary" id="openDownloadModalBtn">Unduh Laporan Proyek</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAINTENANCE DASHBOARD -->
+      <div class="tab-panel active" data-panel="maintenance">
+        <div class="maintenance-kpi">
+          <div class="stat"><div class="label">Total Tagihan Customer</div><div class="value ok" id="mnt-revenue">Rp 0</div></div>
+          <div class="stat"><div class="label">Total Bayar Vendor</div><div class="value warn" id="mnt-vendor-cost">Rp 0</div></div>
+          <div class="stat"><div class="label">Profit Maintenance</div><div class="value" id="mnt-profit">Rp 0</div></div>
+          <div class="stat"><div class="label">Margin</div><div class="value" id="mnt-margin">0%</div></div>
+        </div>
+
+        <div class="card">
+          <h2>Catat Maintenance</h2>
+          <p class="hint">Customer membayar jasa maintenance + chemical yang sudah di-mark-up. Vendor dibayar untuk chemical. Profit = tagihan customer − biaya vendor chemical.</p>
+          <div class="form-grid">
+            <div><label for="mnt-date">Tanggal</label><input type="date" id="mnt-date"></div>
+            <div><label for="mnt-customer">Customer</label><input type="text" id="mnt-customer" placeholder="mis. Villa ABC"></div>
+            <div><label for="mnt-service">Jasa Maintenance (Rp)</label><input type="number" id="mnt-service" min="0" placeholder="mis. 500000"></div>
+            <div><label for="mnt-chemical">Chemical ke Customer / Harga Jual (Rp)</label><input type="number" id="mnt-chemical" min="0" placeholder="mis. 750000"></div>
+            <div><label for="mnt-vendor-cost">Harga Chemical Vendor (Rp)</label><input type="number" id="mnt-vendor-cost" min="0" placeholder="mis. 500000"></div>
+            <div><label for="mnt-labor">Biaya Teknisi / Orang (Rp)</label><input type="number" id="mnt-labor" min="0" placeholder="opsional"></div>
+            <div><label for="mnt-vendor">Vendor Chemical</label><input type="text" id="mnt-vendor" placeholder="mis. Toko Chemical ABC"></div>
+            <div><label for="mnt-payment">Status Customer</label><select id="mnt-payment"><option>Lunas</option><option>Belum Lunas</option><option>DP</option></select></div>
+            <div><label for="mnt-vendor-payment">Status Vendor</label><select id="mnt-vendor-payment"><option>Lunas</option><option>Belum Lunas</option></select></div>
+            <div class="full"><label for="mnt-note">Catatan</label><textarea id="mnt-note" placeholder="Catatan maintenance, jadwal, chemical, dll."></textarea></div>
+          </div>
+          <div class="calc-box">
+            <div class="calc-row"><span>Tagihan customer</span><strong id="mnt-customer-total">Rp 0</strong></div>
+            <div class="calc-row"><span>Biaya vendor chemical</span><strong id="mnt-vendor-total">Rp 0</strong></div>
+            <div class="calc-row"><span>Biaya teknisi / orang</span><strong id="mnt-labor-total">Rp 0</strong></div>
+            <div class="calc-row total"><span>Profit maintenance</span><strong class="profit" id="mnt-live-profit">Rp 0</strong></div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:10px;">
+            <button class="btn" id="saveMaintenanceBtn">Simpan Maintenance</button>
+            <button class="btn secondary" id="cancelMaintenanceEditBtn" style="display:none;">Batal edit</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="filters">
+            <div class="field"><label for="mntfilter-month">Bulan</label><input type="month" id="mntfilter-month"></div>
+            <div class="field"><label for="mntfilter-status">Status Customer</label><select id="mntfilter-status"><option value="">Semua status</option><option>Lunas</option><option>Belum Lunas</option><option>DP</option></select></div>
+            <button class="btn secondary small" id="mntClearFilterBtn">Reset filter</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Tanggal</th><th>Customer</th><th>Jasa</th><th>Chemical Jual</th><th>Vendor</th><th class="amount">Bayar Vendor</th><th class="amount">Tagihan</th><th class="amount">Profit</th><th>Status</th><th></th></tr></thead>
+              <tbody id="maintenanceTableBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="maintenanceEmptyMsg" style="display:none;">Belum ada data maintenance.</div>
+        </div>
+
+        <div class="card">
+          <h2>Insight Maintenance</h2>
+          <div class="summary-grid">
+            <div class="stat"><div class="label">Maintenance Lunas</div><div class="value ok" id="mnt-paid-count">0</div></div>
+            <div class="stat"><div class="label">Piutang Customer</div><div class="value warn" id="mnt-outstanding">Rp 0</div></div>
+            <div class="stat"><div class="label">Chemical Markup</div><div class="value" id="mnt-markup">Rp 0</div></div>
+            <div class="stat"><div class="label">Rata-rata Profit / Visit</div><div class="value" id="mnt-avg-profit">Rp 0</div></div>
           </div>
         </div>
       </div>
@@ -839,10 +925,11 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
 
 let state = {
-  projects: [], transactions: [], expenses: [], projectPayments: [],
+  projects: [], transactions: [], expenses: [], projectPayments: [], maintenance: [],
   pettyCash: [], inventoryItems: [], inventoryMovements: []
 };
 let activeProjectId = null;
+let currentSection = 'maintenance';
 let editingTxId = null;
 let editingExpId = null;
 let editingPcId = null;
@@ -911,6 +998,11 @@ async function loadData(){
 
   // One-file storage: quote and project payments are stored as special rows
   // inside the existing `transactions` table, so no SQL migration is required.
+  state.maintenance = state.transactions.filter(t=>t.vendor==='__MAINTENANCE__').map(t=>{
+    let d={}; try{ d=JSON.parse(t.note||'{}'); }catch(e){}
+    return { id:t.id, date:t.date, customer:d.customer||t.description||'', service:Number(d.service||0), chemicalSell:Number(d.chemicalSell||0), vendorCost:Number(d.vendorCost||0), laborCost:Number(d.laborCost||0), vendor:d.vendorName||'', customerStatus:t.status||'Lunas', vendorStatus:d.vendorStatus||'Lunas', note:d.note||'', raw:t };
+  });
+
   state.projectPayments = state.transactions.filter(t=>t.vendor==='__PAYMENT__').map(t=>{
     const parts=(t.ref||'').split('|');
     return {
@@ -923,7 +1015,7 @@ async function loadData(){
     method:x.method||'Transfer', reference:x.reference||'', note:x.note||'', source:'legacy'
   }));
 
-  state.projects = (projects||[]).map(p=>({ id:p.id, name:p.name, client:p.client||'', location:p.location||'', quoteAmount:Number(p.quote_amount||0), createdAt:p.created_at }));
+  state.projects = (projects||[]).filter(p=>p.name!=='__GENERAL__').map(p=>({ id:p.id, name:p.name, client:p.client||'', location:p.location||'', quoteAmount:Number(p.quote_amount||0), createdAt:p.created_at }));
   state.projects.forEach(p=>{
     const quotes=state.transactions.filter(t=>t.projectId===p.id && t.vendor==='__QUOTE__');
     if(quotes.length) p.quoteAmount=quotes.slice().sort((a,b)=>b.date.localeCompare(a.date))[0].amount;
@@ -948,7 +1040,7 @@ async function loadData(){
   if(state.projects.length && !activeProjectId) activeProjectId=state.projects[0].id;
 }
 function getActiveProject(){ return state.projects.find(p=>p.id===activeProjectId); }
-function getProjectTransactions(){ return state.transactions.filter(t=>t.projectId===activeProjectId && t.vendor!=='__PAYMENT__' && t.vendor!=='__QUOTE__'); }
+function getProjectTransactions(){ return state.transactions.filter(t=>t.projectId===activeProjectId && t.vendor!=='__PAYMENT__' && t.vendor!=='__QUOTE__' && t.vendor!=='__MAINTENANCE__'); }
 function getProjectExpenses(){ return state.expenses; }
 function getProjectPayments(){ return state.projectPayments.filter(x=>x.projectId===activeProjectId); }
 
@@ -959,9 +1051,10 @@ function renderProjectList(){
   list.innerHTML = '';
   state.projects.forEach(p=>{
     const li = document.createElement('li');
-    li.className = 'project-item' + (p.id===activeProjectId ? ' active':'');
+    li.className = 'project-item' + (p.id===activeProjectId && currentSection==='ringkasan' ? ' active':'');
+    li.dataset.project=p.id;
     li.innerHTML = `<span>${escapeHtml(p.name)}</span><button class="del-btn" title="Hapus proyek">✕</button>`;
-    li.querySelector('span').addEventListener('click', ()=>{ activeProjectId = p.id; renderAll(); });
+    li.querySelector('span').addEventListener('click', ()=>{ activeProjectId = p.id; activatePanel('ringkasan'); renderAll(); });
     li.querySelector('.del-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openConfirmDeleteProject(p); });
     list.appendChild(li);
   });
@@ -975,37 +1068,46 @@ function renderProjectList(){
   }
 }
 
+function activatePanel(panel){
+  currentSection = panel;
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  const target=document.querySelector(`.tab-panel[data-panel="${panel}"]`);
+  if(target) target.classList.add('active');
+  document.querySelectorAll('.side-nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.nav===panel));
+  document.querySelectorAll('.project-item').forEach(li=>li.classList.toggle('active', panel==='ringkasan' && li.dataset.project===activeProjectId));
+  renderTitleBlock();
+}
+
 function renderTitleBlock(){
   const proj = getActiveProject();
   document.getElementById('todayDate').textContent = new Date().toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
-  document.getElementById('activeProjectName').textContent = proj ? proj.name : 'Belum ada proyek';
-  const bits = [];
-  if(proj){
-    if(proj.client) bits.push(`<span>Klien: <b>${escapeHtml(proj.client)}</b></span>`);
-    bits.push(`<span>Quote: <b>${rupiah(proj.quoteAmount||0)}</b></span>`);
-    if(proj.location) bits.push(`<span>Lokasi: <b>${escapeHtml(proj.location)}</b></span>`);
-    bits.push(`<span>Total nota: <b>${getProjectTransactions().length}</b></span>`);
-  }
+  let title='Buku Nota';
+  let bits=[];
+  if(currentSection==='ringkasan'){
+    title=proj ? proj.name : 'Pilih proyek';
+    if(proj){
+      if(proj.client) bits.push(`<span>Klien: <b>${escapeHtml(proj.client)}</b></span>`);
+      bits.push(`<span>Quote: <b>${rupiah(proj.quoteAmount||0)}</b></span>`);
+      if(proj.location) bits.push(`<span>Lokasi: <b>${escapeHtml(proj.location)}</b></span>`);
+    }
+  }else if(currentSection==='input') title=proj ? 'Biaya Proyek — '+proj.name : 'Biaya Proyek';
+  else if(currentSection==='maintenance') title='Maintenance Dashboard';
+  else if(currentSection==='pengeluaran') title='Expenses General';
+  else if(currentSection==='pettycash') title='Petty Cash General';
+  else if(currentSection==='inventory') title='Inventory General';
+  document.getElementById('activeProjectName').textContent = title;
   document.getElementById('activeProjectMeta').innerHTML = bits.join('');
-
   const hasProj = !!proj;
-  document.getElementById('tx-noProjectMsg').style.display = hasProj ? 'none':'block';
-  document.getElementById('tx-content').style.display = hasProj ? 'block':'none';
+  document.getElementById('tx-noProjectMsg').style.display = currentSection==='input' && !hasProj ? 'block':'none';
+  document.getElementById('tx-content').style.display = currentSection==='input' && hasProj ? 'block':'none';
   document.getElementById('ex-noProjectMsg').style.display = 'none';
-  document.getElementById('ex-content').style.display = 'block';
-  document.getElementById('rk-noProjectMsg').style.display = hasProj ? 'none':'block';
-  document.getElementById('rk-content').style.display = hasProj ? 'block':'none';
+  document.getElementById('ex-content').style.display = currentSection==='pengeluaran' ? 'block':'none';
+  document.getElementById('rk-noProjectMsg').style.display = currentSection==='ringkasan' && !hasProj ? 'block':'none';
+  document.getElementById('rk-content').style.display = currentSection==='ringkasan' && hasProj ? 'block':'none';
 }
 
 function setupTabs(){
-  document.querySelectorAll('.tab-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-      btn.classList.add('active');
-      document.querySelector(`.tab-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
-    });
-  });
+  document.querySelectorAll('.side-nav-btn').forEach(btn=>btn.addEventListener('click',()=>activatePanel(btn.dataset.nav)));
 }
 
 function renderAll(){
@@ -1016,6 +1118,8 @@ function renderAll(){
   renderSummary();
   renderPettyCash();
   renderInventoryAll();
+  renderMaintenance();
+  renderTitleBlock();
 }
 
 // ===================== MODAL HELPER =====================
@@ -1175,7 +1279,7 @@ function startEditTransaction(t){
   document.getElementById('f-note').value = t.note || '';
   document.getElementById('formTitle').textContent = 'Edit transaksi';
   document.getElementById('cancelEditBtn').style.display = 'inline-block';
-  document.querySelector('.tab-btn[data-tab="input"]').click();
+  activatePanel('input');
 }
 
 function resetTxForm(){
@@ -1274,7 +1378,7 @@ function startEditExpense(x){
   document.getElementById('e-note').value = x.note || '';
   document.getElementById('expFormTitle').textContent = 'Edit pengeluaran';
   document.getElementById('cancelExpenseEditBtn').style.display = 'inline-block';
-  document.querySelector('.tab-btn[data-tab="pengeluaran"]').click();
+  activatePanel('pengeluaran');
 }
 
 function resetExpForm(){
@@ -1290,12 +1394,20 @@ function resetExpForm(){
   document.getElementById('cancelExpenseEditBtn').style.display = 'none';
 }
 
+async function ensureGeneralProject(){
+  if(window.generalProjectId) return window.generalProjectId;
+  const {data,error}=await sb.from('projects').select('id').eq('name','__GENERAL__').eq('user_id',currentUser.id).limit(1).maybeSingle();
+  if(data){window.generalProjectId=data.id;return data.id;}
+  const ins=await sb.from('projects').insert({user_id:currentUser.id,name:'__GENERAL__',client:'',location:'GLOBAL'}).select().single();
+  if(ins.error) return null; window.generalProjectId=ins.data.id; return ins.data.id;
+}
+
 async function handleSaveExpense(){
   const date = document.getElementById('e-date').value || todayISO();
   const description = document.getElementById('e-desc').value.trim();
   const amount = parseFloat(document.getElementById('e-amount').value);
   if(!description || !amount || amount<=0){ showToast('Lengkapi deskripsi dan jumlah dulu ya.'); return; }
-  const row = {
+  let row = {
     project_id: null, user_id: currentUser.id, date,
     category: document.getElementById('e-category').value, description,
     party: document.getElementById('e-party').value.trim(), amount,
@@ -1305,6 +1417,13 @@ async function handleSaveExpense(){
   let error;
   if(editingExpId){ ({error} = await sb.from('expenses').update(row).eq('id', editingExpId)); }
   else { ({error} = await sb.from('expenses').insert(row)); }
+  if(error && /project_id|not-null|null value/i.test(error.message||'')){
+    const gid=await ensureGeneralProject();
+    if(!gid){console.error(error);showToast('Gagal membuat ruang General.');return;}
+    row.project_id=gid;
+    if(editingExpId) ({error}=await sb.from('expenses').update(row).eq('id',editingExpId));
+    else ({error}=await sb.from('expenses').insert(row));
+  }
   if(error){ console.error(error); showToast('Gagal menyimpan pengeluaran.'); return; }
   showToast(editingExpId ? 'Pengeluaran diperbarui.' : 'Pengeluaran disimpan.');
   resetExpForm();
@@ -1564,6 +1683,158 @@ function openDownloadModal(){
   });
 }
 
+// ===================== MAINTENANCE =====================
+
+function getMaintenanceFiltered(){
+  const month=document.getElementById('mntfilter-month').value;
+  const status=document.getElementById('mntfilter-status').value;
+  return state.maintenance.filter(m=>{
+    if(month && m.date.slice(0,7)!==month) return false;
+    if(status && m.customerStatus!==status) return false;
+    return true;
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+function updateMaintenanceCalc(){
+  const service=Number(document.getElementById('mnt-service').value)||0;
+  const chemicalSell=Number(document.getElementById('mnt-chemical').value)||0;
+  const vendorCost=Number(document.getElementById('mnt-vendor-cost').value)||0;
+  const laborCost=Number(document.getElementById('mnt-labor').value)||0;
+  const total=service+chemicalSell;
+  const profit=total-vendorCost-laborCost;
+  document.getElementById('mnt-customer-total').textContent=rupiah(total);
+  document.getElementById('mnt-vendor-total').textContent=rupiah(vendorCost);
+  document.getElementById('mnt-labor-total').textContent=rupiah(laborCost);
+  const p=document.getElementById('mnt-live-profit'); p.textContent=rupiah(profit); p.className=profit<0?'loss':'profit';
+}
+
+function renderMaintenance(){
+  const list=getMaintenanceFiltered();
+  const revenue=list.reduce((s,m)=>s+m.service+m.chemicalSell,0);
+  const vendorCost=list.reduce((s,m)=>s+m.vendorCost,0);
+  const laborCost=list.reduce((s,m)=>s+m.laborCost,0);
+  const profit=revenue-vendorCost-laborCost;
+  const margin=revenue?profit/revenue*100:0;
+  const revenueAll=state.maintenance.reduce((s,m)=>s+m.service+m.chemicalSell,0);
+  const vendorAll=state.maintenance.reduce((s,m)=>s+m.vendorCost,0);
+  const laborAll=state.maintenance.reduce((s,m)=>s+m.laborCost,0);
+  const profitAll=revenueAll-vendorAll-laborAll;
+  document.getElementById('mnt-revenue').textContent=rupiah(revenueAll);
+  document.getElementById('mnt-vendor-cost').textContent=rupiah(vendorAll);
+  document.getElementById('mnt-profit').textContent=rupiah(profitAll);
+  document.getElementById('mnt-profit').className='value '+(profitAll<0?'warn':'ok');
+  document.getElementById('mnt-margin').textContent=(revenueAll?profitAll/revenueAll*100:0).toFixed(1)+'%';
+  document.getElementById('mnt-paid-count').textContent=state.maintenance.filter(m=>m.customerStatus==='Lunas').length;
+  document.getElementById('mnt-outstanding').textContent=rupiah(state.maintenance.filter(m=>m.customerStatus!=='Lunas').reduce((s,m)=>s+m.service+m.chemicalSell,0));
+  document.getElementById('mnt-markup').textContent=rupiah(state.maintenance.reduce((s,m)=>s+m.chemicalSell-m.vendorCost,0));
+  document.getElementById('mnt-avg-profit').textContent=rupiah(state.maintenance.length?profitAll/state.maintenance.length:0);
+
+  const body=document.getElementById('maintenanceTableBody'); body.innerHTML='';
+  document.getElementById('maintenanceEmptyMsg').style.display=list.length?'none':'block';
+  list.forEach(m=>{
+    const total=m.service+m.chemicalSell, p=total-m.vendorCost-m.laborCost;
+    const tr=document.createElement('tr');
+    const bc=m.customerStatus==='Lunas'?'lunas':(m.customerStatus==='DP'?'dp':'belum');
+    tr.innerHTML=`<td>${formatDateShort(m.date)}</td><td>${escapeHtml(m.customer)}</td><td class="amount">${rupiah(m.service)}</td><td class="amount">${rupiah(m.chemicalSell)}</td><td>${escapeHtml(m.vendor||'-')}</td><td class="amount">${rupiah(m.vendorCost)}</td><td class="amount">${rupiah(total)}</td><td class="amount ${p<0?'diff-neg':'diff-pos'}">${rupiah(p)}</td><td><span class="badge ${bc}">${escapeHtml(m.customerStatus)}</span></td><td class="row-actions"><button class="icon-btn" data-a="edit" title="Edit">✎</button><button class="icon-btn" data-a="del" title="Hapus">✕</button></td>`;
+    tr.querySelector('[data-a="edit"]').addEventListener('click',()=>startEditMaintenance(m));
+    tr.querySelector('[data-a="del"]').addEventListener('click',()=>deleteMaintenance(m));
+    body.appendChild(tr);
+  });
+}
+
+function resetMaintenanceForm(){
+  window.editingMaintenanceId=null;
+  document.getElementById('mnt-date').value=todayISO();
+  document.getElementById('mnt-customer').value='';
+  document.getElementById('mnt-service').value='';
+  document.getElementById('mnt-chemical').value='';
+  document.getElementById('mnt-vendor-cost').value='';
+  document.getElementById('mnt-labor').value='';
+  document.getElementById('mnt-vendor').value='';
+  document.getElementById('mnt-payment').value='Lunas';
+  document.getElementById('mnt-vendor-payment').value='Lunas';
+  document.getElementById('mnt-note').value='';
+  document.getElementById('cancelMaintenanceEditBtn').style.display='none';
+  updateMaintenanceCalc();
+}
+
+function startEditMaintenance(m){
+  window.editingMaintenanceId=m.id;
+  document.getElementById('mnt-date').value=m.date;
+  document.getElementById('mnt-customer').value=m.customer;
+  document.getElementById('mnt-service').value=m.service;
+  document.getElementById('mnt-chemical').value=m.chemicalSell;
+  document.getElementById('mnt-vendor-cost').value=m.vendorCost;
+  document.getElementById('mnt-labor').value=m.laborCost||0;
+  document.getElementById('mnt-vendor').value=m.vendor;
+  document.getElementById('mnt-payment').value=m.customerStatus;
+  document.getElementById('mnt-vendor-payment').value=m.vendorStatus;
+  document.getElementById('mnt-note').value=m.note||'';
+  document.getElementById('cancelMaintenanceEditBtn').style.display='inline-block';
+  activatePanel('maintenance'); updateMaintenanceCalc();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function handleSaveMaintenance(){
+  const customer=document.getElementById('mnt-customer').value.trim();
+  const date=document.getElementById('mnt-date').value||todayISO();
+  const service=Number(document.getElementById('mnt-service').value)||0;
+  const chemicalSell=Number(document.getElementById('mnt-chemical').value)||0;
+  const vendorCost=Number(document.getElementById('mnt-vendor-cost').value)||0;
+  const laborCost=Number(document.getElementById('mnt-labor').value)||0;
+  const vendorName=document.getElementById('mnt-vendor').value.trim();
+  if(!customer){showToast('Customer wajib diisi.');return;}
+  if(service<=0 && chemicalSell<=0){showToast('Isi minimal jasa atau chemical yang ditagihkan.');return;}
+  if(vendorCost<0){showToast('Biaya vendor tidak valid.');return;}
+  const customerStatus=document.getElementById('mnt-payment').value;
+  const vendorStatus=document.getElementById('mnt-vendor-payment').value;
+  const noteText=document.getElementById('mnt-note').value.trim();
+  const noteObj={customer,service,chemicalSell,vendorCost,laborCost,vendorName,vendorStatus,note:noteText};
+  const row={user_id:currentUser.id,project_id:null,date,category:'__MAINTENANCE__',vendor:'__MAINTENANCE__',amount:service+chemicalSell,description:customer,status:customerStatus,ref:'MAINTENANCE',note:JSON.stringify(noteObj)};
+  let error, maintenanceId=window.editingMaintenanceId||null;
+  if(maintenanceId){
+    ({error}=await sb.from('transactions').update(row).eq('id',maintenanceId));
+  }else{
+    const ins=await sb.from('transactions').insert(row).select().single();
+    error=ins.error; if(!error) maintenanceId=ins.data.id;
+  }
+  if(error && /project_id|not-null|null value/i.test(error.message||'')){
+    const gid=await ensureGeneralProject();
+    if(gid){ row.project_id=gid; if(maintenanceId) ({error}=await sb.from('transactions').update(row).eq('id',maintenanceId)); else {const ins=await sb.from('transactions').insert(row).select().single();error=ins.error;if(!error)maintenanceId=ins.data.id;}} 
+  }
+  if(error){console.error(error);showToast('Gagal menyimpan maintenance.');return;}
+
+  // Simpan biaya vendor juga ke Expenses General agar pembayaran vendor masuk ke pengeluaran umum.
+  const vendorMarker=`MAINTENANCE:${maintenanceId}`;
+  const existingExpense=state.expenses.find(x=>(x.note||'').startsWith(vendorMarker));
+  if(vendorCost>0){
+    const expenseRow={project_id:null,user_id:currentUser.id,date,category:'Maintenance Vendor',description:`Chemical untuk ${customer}`,party:vendorName,amount:vendorCost,status:vendorStatus,note:`${vendorMarker}${noteText?' | '+noteText:''}`};
+    let exErr;
+    if(existingExpense) ({error:exErr}=await sb.from('expenses').update(expenseRow).eq('id',existingExpense.id));
+    else ({error:exErr}=await sb.from('expenses').insert(expenseRow));
+    if(exErr && /project_id|not-null|null value/i.test(exErr.message||'')){
+      const gid=await ensureGeneralProject();
+      if(gid){expenseRow.project_id=gid;if(existingExpense)({error:exErr}=await sb.from('expenses').update(expenseRow).eq('id',existingExpense.id));else({error:exErr}=await sb.from('expenses').insert(expenseRow));}
+    }
+    if(exErr){console.error(exErr);showToast('Maintenance tersimpan, tetapi biaya vendor gagal masuk Expenses General.');}
+  }else if(existingExpense){
+    await sb.from('expenses').delete().eq('id',existingExpense.id);
+  }
+
+  const wasEdit=!!window.editingMaintenanceId;
+  resetMaintenanceForm(); await loadData(); renderAll(); showToast(wasEdit?'Maintenance diperbarui.':'Maintenance disimpan.');
+}
+
+function deleteMaintenance(m){
+  openModal({title:'Hapus data maintenance?',body:`${escapeHtml(m.customer)} — ${rupiah(m.service+m.chemicalSell)}`,confirmLabel:'Hapus',onConfirm:async()=>{
+    const {error}=await sb.from('transactions').delete().eq('id',m.id);
+    if(error){console.error(error);showToast('Gagal menghapus maintenance.');return;}
+    const linked=state.expenses.find(x=>(x.note||'').startsWith(`MAINTENANCE:${m.id}`));
+    if(linked) await sb.from('expenses').delete().eq('id',linked.id);
+    await loadData();renderAll();showToast('Data maintenance dihapus.');
+  }});
+}
+
 // ===================== PETTY CASH =====================
 
 function applyPcFilters(list){
@@ -1613,7 +1884,7 @@ function startEditPettyCash(x){
   document.getElementById('pc-note').value = x.note || '';
   document.getElementById('pcFormTitle').textContent = 'Edit catatan kas';
   document.getElementById('cancelPcEditBtn').style.display = 'inline-block';
-  document.querySelector('.tab-btn[data-tab="pettycash"]').click();
+  activatePanel('pettycash');
 }
 
 function resetPcForm(){
@@ -1977,8 +2248,17 @@ function setupAppEvents(){
     document.getElementById('summary-month').value=''; renderSummary();
   });
   document.getElementById('openDownloadModalBtn').addEventListener('click', openDownloadModal);
+  document.getElementById('addProjectCostBtn').addEventListener('click',()=>activatePanel('input'));
   document.getElementById('editProjectQuoteBtn').addEventListener('click', openEditProjectQuoteModal);
   document.getElementById('saveProjectPaymentBtn').addEventListener('click', handleSaveProjectPayment);
+
+  // maintenance
+  ['mnt-service','mnt-chemical','mnt-vendor-cost','mnt-labor'].forEach(id=>document.getElementById(id).addEventListener('input',updateMaintenanceCalc));
+  document.getElementById('saveMaintenanceBtn').addEventListener('click',handleSaveMaintenance);
+  document.getElementById('cancelMaintenanceEditBtn').addEventListener('click',resetMaintenanceForm);
+  document.getElementById('mntfilter-month').addEventListener('change',renderMaintenance);
+  document.getElementById('mntfilter-status').addEventListener('change',renderMaintenance);
+  document.getElementById('mntClearFilterBtn').addEventListener('click',()=>{document.getElementById('mntfilter-month').value='';document.getElementById('mntfilter-status').value='';renderMaintenance();});
 
   // petty cash
   document.getElementById('savePettyCashBtn').addEventListener('click', handleSavePettyCash);
@@ -2009,6 +2289,7 @@ function setupAppEvents(){
 }
 
 setupAppEvents();
+activatePanel('maintenance');
 initAuth();
 </script>
 </body>
