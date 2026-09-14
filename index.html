@@ -980,16 +980,18 @@ async function loadData(){
     sb.from('inventory_items').select('*').order('created_at', { ascending: true }),
     sb.from('inventory_movements').select('*').order('date', { ascending: false })
   ]);
-  const err = e1||e2||e3||e4||e5||e6;
-  if(err){ console.error(err); showToast('Gagal memuat sebagian data dari Supabase.'); }
+  const loadErrors = [
+    ['projects', e1], ['transactions', e2], ['expenses', e3],
+    ['petty_cash', e4], ['inventory_items', e5], ['inventory_movements', e6]
+  ].filter(x => x[1]);
+  if(loadErrors.length){
+    console.error('Supabase load errors:', loadErrors);
+    showToast('Ada data Supabase yang belum tersedia. Cek Console untuk detail tabel.');
+  }
 
-  // Backward compatibility: if the optional project_payments table already exists
-  // from an older version, keep showing those records too. Fresh installs do not need it.
-  let legacyPayments = [];
-  try {
-    const legacy = await sb.from('project_payments').select('*').order('date', { ascending:false });
-    if(!legacy.error) legacyPayments = legacy.data || [];
-  } catch(e) { /* table may not exist; that is expected for the one-file version */ }
+  // This version stores project payments inside the transactions table.
+  // No separate project_payments table is required.
+  const legacyPayments = [];
 
   state.transactions = (transactions||[]).map(t=>({
     id:t.id, projectId:t.project_id, date:t.date, category:t.category, vendor:t.vendor||'',
