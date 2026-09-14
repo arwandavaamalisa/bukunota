@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -321,6 +322,10 @@
   .diff-pos{color:var(--ok);font-weight:600;}
   .diff-neg{color:var(--warn);font-weight:600;}
   .diff-zero{color:var(--muted);}
+  .budget-ok{color:var(--ok);font-weight:600}.budget-over{color:var(--warn);font-weight:700}
+  .section-pill{display:inline-block;padding:3px 7px;border:1px solid var(--line);font-size:10px;font-weight:600}
+  .upload-preview{background:#faf8f2;border:1px dashed var(--line);padding:12px;margin-top:10px;font-size:12px}
+  .kpi-note{font-size:11px;color:var(--muted);margin-top:4px}
 </style>
 </head>
 <body>
@@ -405,6 +410,10 @@
                 </select>
               </div>
               <div>
+                <label for="f-quote-item">Budget dari Quote (opsional)</label>
+                <select id="f-quote-item"><option value="">— Tidak dikaitkan —</option></select>
+              </div>
+              <div>
                 <label for="f-vendor">Vendor / Toko</label>
                 <input type="text" id="f-vendor" placeholder="mis. Toko Bangunan Sinar Jaya">
               </div>
@@ -475,7 +484,7 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Tanggal</th><th>Kategori</th><th>Vendor</th><th>Deskripsi</th>
+                    <th>Tanggal</th><th>Kategori</th><th>Budget Quote</th><th>Vendor</th><th>Deskripsi</th>
                     <th class="amount">Jumlah</th><th>Status</th><th></th>
                   </tr>
                 </thead>
@@ -605,6 +614,76 @@
               <div class="stat"><div class="label">Pembayaran belum tercatat</div><div class="value warn" id="stat-payment-gap">Rp 0</div></div>
               <div class="stat"><div class="label">Margin berdasarkan kas</div><div class="value" id="stat-margin">Rp 0</div></div>
             </div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div>
+                <h2 style="margin:0 0 4px;">Quote & Budget Proyek</h2>
+                <p class="hint" style="margin:0;">Upload PDF/Excel quote. Sistem membaca item, quantity, harga satuan, total, dan bagian budget. Hasil import bisa dicek dulu sebelum disimpan.</p>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn secondary small" id="uploadQuoteBtn">📄 Upload Quote</button>
+                <button class="btn secondary small" id="addQuoteItemBtn">+ Tambah Budget Manual</button>
+              </div>
+            </div>
+            <input type="file" id="quoteFileInput" accept=".pdf,.xlsx,.xls,.csv" style="display:none;">
+            <div id="quoteImportStatus" style="margin-top:12px;"></div>
+            <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);margin-top:16px;">
+              <div class="stat"><div class="label">Revenue Quote</div><div class="value" id="quote-revenue-kpi">Rp 0</div></div>
+              <div class="stat"><div class="label">Budget Vendor</div><div class="value" id="quote-vendor-kpi">Rp 0</div></div>
+              <div class="stat"><div class="label">Budget Material</div><div class="value" id="quote-material-kpi">Rp 0</div></div>
+              <div class="stat"><div class="label">Budget Gross Profit</div><div class="value ok" id="quote-gp-kpi">Rp 0</div></div>
+            </div>
+            <div style="overflow-x:auto;margin-top:12px;">
+              <table>
+                <thead><tr><th>Bagian</th><th>Item</th><th class="amount">Qty</th><th>Satuan</th><th class="amount">Budget / Unit</th><th class="amount">Budget Total</th><th></th></tr></thead>
+                <tbody id="quoteItemsBody"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="quoteItemsEmpty" style="display:none;">Belum ada item quote. Upload quote atau tambah manual.</div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div>
+                <h2 style="margin:0 0 4px;">Plan Belanja Bulanan</h2>
+                <p class="hint" style="margin:0;">Tentukan kapan item quote akan dibeli dan berapa rencana belanjanya. Nanti otomatis dibandingkan dengan aktual.</p>
+              </div>
+              <button class="btn secondary small" id="exportMonthlyPlanBtn">⬇ Download Rekapan Bulanan</button>
+            </div>
+            <div class="form-grid" style="margin-top:14px;">
+              <div><label for="plan-date">Tanggal rencana</label><input type="date" id="plan-date"></div>
+              <div><label for="plan-item">Item Quote</label><select id="plan-item"><option value="">Pilih item quote</option></select></div>
+              <div><label for="plan-amount">Rencana belanja (Rp)</label><input type="number" id="plan-amount" min="0" placeholder="0"></div>
+              <div><label for="plan-vendor">Vendor rencana (opsional)</label><input type="text" id="plan-vendor" placeholder="Toko / supplier"></div>
+              <div class="full"><label for="plan-note">Catatan</label><input type="text" id="plan-note" placeholder="mis. beli minggu pertama bulan depan"></div>
+            </div>
+            <div style="margin-top:12px;"><button class="btn small" id="savePlanBtn">Simpan Plan Belanja</button></div>
+            <div style="overflow-x:auto;margin-top:16px;">
+              <table>
+                <thead><tr><th>Tanggal</th><th>Item</th><th>Vendor</th><th class="amount">Plan</th><th>Catatan</th><th></th></tr></thead>
+                <tbody id="purchasePlanBody"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="purchasePlanEmpty" style="display:none;">Belum ada plan belanja.</div>
+          </div>
+
+          <div class="card">
+            <h2>Plan vs Actual & Profit Proyek</h2>
+            <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);">
+              <div class="stat"><div class="label">Actual Project Cost</div><div class="value warn" id="profit-actual-cost">Rp 0</div></div>
+              <div class="stat"><div class="label">Gross Profit Actual</div><div class="value ok" id="profit-gross">Rp 0</div></div>
+              <div class="stat"><div class="label">Tax 4%</div><div class="value warn" id="profit-tax">Rp 0</div></div>
+              <div class="stat"><div class="label">Net Profit After Tax</div><div class="value ok" id="profit-net">Rp 0</div></div>
+            </div>
+            <div style="overflow-x:auto;margin-top:10px;">
+              <table>
+                <thead><tr><th>Budget Item</th><th>Bagian</th><th class="amount">Budget</th><th class="amount">Plan</th><th class="amount">Actual</th><th class="amount">Sisa Budget</th><th class="amount">Variance</th><th>Status</th></tr></thead>
+                <tbody id="planActualBody"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="planActualEmpty" style="display:none;">Belum ada budget item untuk dibandingkan.</div>
           </div>
 
           <div class="card">
@@ -810,7 +889,7 @@
           <h2>Stok alat saat ini</h2>
           <div style="overflow-x:auto;">
             <table>
-              <thead><tr><th>Nama alat</th><th>Satuan</th><th class="amount">Stok sistem</th><th></th></tr></thead>
+              <thead><tr><th>Nama alat</th><th>Satuan</th><th class="amount">Stok</th><th class="amount">Harga rata-rata</th><th class="amount">Nilai stok</th><th></th></tr></thead>
               <tbody id="invStockTableBody"></tbody>
             </table>
           </div>
@@ -850,8 +929,12 @@
               <input type="text" id="mv-vendor" placeholder="mis. Toko Alat Jaya">
             </div>
             <div id="mv-cost-wrap">
-              <label for="mv-cost">Total harga (opsional, Rp)</label>
-              <input type="number" id="mv-cost" placeholder="0" min="0">
+              <label for="mv-cost">Total harga pembelian (Rp)</label>
+              <input type="number" id="mv-cost" placeholder="mis. 1500000" min="0">
+            </div>
+            <div id="mv-unit-cost-wrap">
+              <label for="mv-unit-cost">Harga satuan (otomatis, Rp)</label>
+              <input type="number" id="mv-unit-cost" placeholder="otomatis dari total ÷ qty" min="0" readonly>
             </div>
             <div class="full">
               <label for="mv-note">Catatan (opsional)</label>
@@ -926,7 +1009,7 @@ let currentUser = null;
 
 let state = {
   projects: [], transactions: [], expenses: [], projectPayments: [], maintenance: [],
-  pettyCash: [], inventoryItems: [], inventoryMovements: []
+  pettyCash: [], inventoryItems: [], inventoryMovements: [], quoteItems: [], purchasePlans: []
 };
 let activeProjectId = null;
 let currentSection = 'maintenance';
@@ -971,18 +1054,23 @@ async function loadData(){
     { data: expenses, error: e3 },
     { data: pettyCash, error: e4 },
     { data: items, error: e5 },
-    { data: movements, error: e6 }
+    { data: movements, error: e6 },
+    { data: quoteItems, error: e7 },
+    { data: purchasePlans, error: e8 }
   ] = await Promise.all([
     sb.from('projects').select('*').order('created_at', { ascending: true }),
     sb.from('transactions').select('*').order('date', { ascending: false }),
     sb.from('expenses').select('*').order('date', { ascending: false }),
     sb.from('petty_cash').select('*').order('date', { ascending: false }),
     sb.from('inventory_items').select('*').order('created_at', { ascending: true }),
-    sb.from('inventory_movements').select('*').order('date', { ascending: false })
+    sb.from('inventory_movements').select('*').order('date', { ascending: false }),
+    sb.from('project_quote_items').select('*').order('created_at', { ascending: true }),
+    sb.from('project_purchase_plans').select('*').order('date', { ascending: false })
   ]);
   const loadErrors = [
     ['projects', e1], ['transactions', e2], ['expenses', e3],
-    ['petty_cash', e4], ['inventory_items', e5], ['inventory_movements', e6]
+    ['petty_cash', e4], ['inventory_items', e5], ['inventory_movements', e6],
+    ['project_quote_items', e7], ['project_purchase_plans', e8]
   ].filter(x => x[1]);
   if(loadErrors.length){
     console.error('Supabase load errors:', loadErrors);
@@ -995,7 +1083,7 @@ async function loadData(){
 
   state.transactions = (transactions||[]).map(t=>({
     id:t.id, projectId:t.project_id, date:t.date, category:t.category, vendor:t.vendor||'',
-    amount:Number(t.amount), description:t.description||'', status:t.status||'', ref:t.ref||'', note:t.note||''
+    amount:Number(t.amount), description:t.description||'', status:t.status||'', ref:t.ref||'', note:t.note||'', quoteItemId:t.quote_item_id||''
   }));
 
   // One-file storage: quote and project payments are stored as special rows
@@ -1036,7 +1124,16 @@ async function loadData(){
   }));
   state.inventoryMovements = (movements||[]).map(x=>({
     id:x.id, itemId:x.item_id, date:x.date, type:x.type, quantity:Number(x.quantity),
-    projectId:x.project_id||'', vendor:x.vendor||'', cost:x.cost!=null?Number(x.cost):null, note:x.note||''
+    projectId:x.project_id||'', vendor:x.vendor||'', cost:x.cost!=null?Number(x.cost):null, note:x.note||'', quoteItemId:x.quote_item_id||''
+  }));
+  state.quoteItems = (quoteItems||[]).map(x=>({
+    id:x.id, projectId:x.project_id, section:normalizeQuoteSection(x.section), description:x.description||'',
+    qty:Number(x.qty||0), unit:x.unit||'unit', unitPrice:Number(x.unit_price||0), total:Number(x.total||0),
+    sourceFile:x.source_file||'', createdAt:x.created_at
+  }));
+  state.purchasePlans = (purchasePlans||[]).map(x=>({
+    id:x.id, projectId:x.project_id, quoteItemId:x.quote_item_id, date:x.date, amount:Number(x.amount||0),
+    vendor:x.vendor||'', note:x.note||''
   }));
 
   if(state.projects.length && !activeProjectId) activeProjectId=state.projects[0].id;
@@ -1120,6 +1217,7 @@ function renderAll(){
   renderSummary();
   renderPettyCash();
   renderInventoryAll();
+  renderQuoteData();
   renderMaintenance();
   renderTitleBlock();
 }
@@ -1149,6 +1247,69 @@ function openModal({title, body, confirmLabel, onConfirm, formHtml, onSubmit, hi
     });
   }
 }
+
+// ===================== QUOTE / PLAN / ACTUAL =====================
+function normalizeQuoteSection(s){
+  const x=String(s||'').toUpperCase();
+  if(x.includes('VENDOR') || x.includes('FEE')) return 'Vendor Fee';
+  if(x.includes('MATERIAL')) return 'Material';
+  if(x.includes('TAX') || x.includes('CONTINGENCY')) return 'Tax & Contingency';
+  if(x.includes('GROSS')) return 'Gross Profit';
+  return 'Revenue';
+}
+function parseRpLoose(v){
+  if(v==null) return 0;
+  let x=String(v).replace(/Rp/gi,'').trim();
+  if(x.includes('.') && !x.includes(',')) x=x.replace(/\./g,'');
+  else { x=x.replace(/\./g,'').replace(',','.'); }
+  const n=parseFloat(x.replace(/[^\d.-]/g,''));
+  return isFinite(n)?n:0;
+}
+function quoteItemsForProject(){ return (state.quoteItems||[]).filter(x=>x.projectId===activeProjectId); }
+function quoteBudgetTotals(){
+  const items=quoteItemsForProject();
+  return { revenue:items.filter(x=>x.section==='Revenue').reduce((s,x)=>s+x.total,0), vendor:items.filter(x=>x.section==='Vendor Fee').reduce((s,x)=>s+x.total,0), material:items.filter(x=>x.section==='Material').reduce((s,x)=>s+x.total,0), tax:items.filter(x=>x.section==='Tax & Contingency').reduce((s,x)=>s+x.total,0), gross:items.filter(x=>x.section==='Gross Profit').reduce((s,x)=>s+x.total,0) };
+}
+function actualByQuoteItem(){ const map={}; getProjectTransactions().forEach(t=>{if(t.quoteItemId) map[t.quoteItemId]=(map[t.quoteItemId]||0)+Number(t.amount||0);}); return map; }
+function planByQuoteItem(){ const map={}; (state.purchasePlans||[]).filter(p=>p.projectId===activeProjectId).forEach(p=>{map[p.quoteItemId]=(map[p.quoteItemId]||0)+Number(p.amount||0);}); return map; }
+function renderQuoteItemSelects(){
+  const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee');
+  const opts='<option value="">— Tidak dikaitkan —</option>'+items.map(x=>`<option value="${x.id}">${escapeHtml(x.description)} — ${rupiah(x.total)}</option>`).join('');
+  const el=document.getElementById('f-quote-item'); if(el) el.innerHTML=opts;
+  const pl=document.getElementById('plan-item'); if(pl) pl.innerHTML='<option value="">Pilih item quote</option>'+items.map(x=>`<option value="${x.id}">${escapeHtml(x.description)} — ${rupiah(x.total)}</option>`).join('');
+}
+function renderQuoteItems(){
+  const body=document.getElementById('quoteItemsBody'); if(!body)return; body.innerHTML='';
+  const items=quoteItemsForProject(); document.getElementById('quoteItemsEmpty').style.display=items.length?'none':'block';
+  items.forEach(q=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td><span class="section-pill">${escapeHtml(q.section)}</span></td><td>${escapeHtml(q.description)}</td><td class="amount">${q.qty||0}</td><td>${escapeHtml(q.unit||'-')}</td><td class="amount">${rupiah(q.unitPrice||0)}</td><td class="amount">${rupiah(q.total||0)}</td><td><button class="icon-btn" title="Hapus budget">✕</button></td>`; tr.querySelector('button').addEventListener('click',()=>openConfirmDeleteQuoteItem(q)); body.appendChild(tr); });
+  const t=quoteBudgetTotals(), revenue=Number(getActiveProject()?.quoteAmount||t.revenue||0);
+  document.getElementById('quote-revenue-kpi').textContent=rupiah(revenue); document.getElementById('quote-vendor-kpi').textContent=rupiah(t.vendor); document.getElementById('quote-material-kpi').textContent=rupiah(t.material); document.getElementById('quote-gp-kpi').textContent=rupiah(revenue-t.vendor-t.material-t.tax);
+}
+function renderPurchasePlans(){
+  const body=document.getElementById('purchasePlanBody'); if(!body)return; body.innerHTML='';
+  const list=(state.purchasePlans||[]).filter(p=>p.projectId===activeProjectId).sort((a,b)=>b.date.localeCompare(a.date)); document.getElementById('purchasePlanEmpty').style.display=list.length?'none':'block';
+  list.forEach(p=>{ const q=quoteItemsForProject().find(x=>x.id===p.quoteItemId); const tr=document.createElement('tr'); tr.innerHTML=`<td>${formatDateShort(p.date)}</td><td>${q?escapeHtml(q.description):'Item terhapus'}</td><td>${escapeHtml(p.vendor||'-')}</td><td class="amount">${rupiah(p.amount)}</td><td>${escapeHtml(p.note||'')}</td><td><button class="icon-btn" title="Hapus">✕</button></td>`; tr.querySelector('button').addEventListener('click',()=>openConfirmDeletePurchasePlan(p)); body.appendChild(tr); });
+}
+function renderPlanActual(){
+  const body=document.getElementById('planActualBody'); if(!body)return; body.innerHTML='';
+  const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee'), am=actualByQuoteItem(), pm=planByQuoteItem(); document.getElementById('planActualEmpty').style.display=items.length?'none':'block';
+  items.forEach(q=>{ const budget=q.total||0, plan=pm[q.id]||0, actual=am[q.id]||0, remaining=budget-actual, variance=actual-budget, over=variance>0; const tr=document.createElement('tr'); tr.innerHTML=`<td>${escapeHtml(q.description)}</td><td>${escapeHtml(q.section)}</td><td class="amount">${rupiah(budget)}</td><td class="amount">${rupiah(plan)}</td><td class="amount">${rupiah(actual)}</td><td class="amount ${remaining<0?'budget-over':'budget-ok'}">${rupiah(remaining)}</td><td class="amount ${over?'budget-over':'budget-ok'}">${over?'+':''}${rupiah(variance)}</td><td><span class="${over?'budget-over':'budget-ok'}">${over?'OVER BUDGET':(actual>0?'TERKENDALI':'BELUM BELI')}</span></td>`; body.appendChild(tr); });
+  const revenue=Number(getActiveProject()?.quoteAmount||0), actualCost=getProjectTransactions().reduce((s,t)=>s+t.amount,0), gross=revenue-actualCost, tax=Math.max(gross,0)*0.04, net=gross-tax;
+  document.getElementById('profit-actual-cost').textContent=rupiah(actualCost); document.getElementById('profit-gross').textContent=rupiah(gross); document.getElementById('profit-tax').textContent=rupiah(tax); document.getElementById('profit-net').textContent=rupiah(net); document.getElementById('profit-gross').className='value '+(gross<0?'warn':'ok'); document.getElementById('profit-net').className='value '+(net<0?'warn':'ok');
+}
+function renderQuoteData(){ renderQuoteItemSelects(); renderQuoteItems(); renderPurchasePlans(); renderPlanActual(); }
+function openAddQuoteItemModal(){
+  if(!activeProjectId){showToast('Pilih proyek dulu.');return;}
+  openModal({title:'Tambah budget quote manual',confirmLabel:'Tambah item',formHtml:`<div style="display:flex;flex-direction:column;gap:12px;"><div><label>Bagian</label><select id="qi-section"><option>Material</option><option>Vendor Fee</option><option>Revenue</option><option>Tax & Contingency</option><option>Gross Profit</option></select></div><div><label>Deskripsi item</label><input id="qi-desc" placeholder="mis. Batu Palimanan Bobos"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div><label>Qty</label><input type="number" id="qi-qty" value="1" min="0"></div><div><label>Satuan</label><input id="qi-unit" value="unit"></div></div><div><label>Harga satuan (Rp)</label><input type="number" id="qi-unitprice" min="0"></div><div><label>Total (Rp)</label><input type="number" id="qi-total" min="0"></div></div>`,onSubmit:async()=>{ const desc=document.getElementById('qi-desc').value.trim(); if(!desc){showToast('Deskripsi wajib diisi.');return false;} const qty=Number(document.getElementById('qi-qty').value)||1, up=Number(document.getElementById('qi-unitprice').value)||0, total=Number(document.getElementById('qi-total').value)||qty*up; const {error}=await sb.from('project_quote_items').insert({user_id:currentUser.id,project_id:activeProjectId,section:document.getElementById('qi-section').value,description:desc,qty,unit:document.getElementById('qi-unit').value.trim()||'unit',unit_price:up,total,source_file:'manual'}); if(error){console.error(error);showToast('Gagal menambah budget item. Jalankan SQL migrasi dulu.');return false;} await loadData();renderAll();showToast('Budget item ditambahkan.'); }});
+}
+function openConfirmDeleteQuoteItem(q){ openModal({title:'Hapus budget item?',body:`${escapeHtml(q.description)} — ${rupiah(q.total)}`,confirmLabel:'Hapus',onConfirm:async()=>{const {error}=await sb.from('project_quote_items').delete().eq('id',q.id);if(error){console.error(error);showToast('Gagal menghapus budget item.');return;}await loadData();renderAll();showToast('Budget item dihapus.');}}); }
+function openConfirmDeletePurchasePlan(p){ openModal({title:'Hapus plan belanja?',body:`${formatDateShort(p.date)} — ${rupiah(p.amount)}`,confirmLabel:'Hapus',onConfirm:async()=>{const {error}=await sb.from('project_purchase_plans').delete().eq('id',p.id);if(error){console.error(error);showToast('Gagal menghapus plan.');return;}await loadData();renderAll();showToast('Plan belanja dihapus.');}}); }
+async function handleSavePurchasePlan(){ if(!activeProjectId){showToast('Pilih proyek dulu.');return;} const date=document.getElementById('plan-date').value||todayISO(), quoteItemId=document.getElementById('plan-item').value, amount=Number(document.getElementById('plan-amount').value)||0; if(!quoteItemId||amount<=0){showToast('Pilih item quote dan isi jumlah plan.');return;} const {error}=await sb.from('project_purchase_plans').insert({user_id:currentUser.id,project_id:activeProjectId,quote_item_id:quoteItemId,date,amount,vendor:document.getElementById('plan-vendor').value.trim(),note:document.getElementById('plan-note').value.trim()}); if(error){console.error(error);showToast('Gagal menyimpan plan. Jalankan SQL migrasi dulu.');return;} document.getElementById('plan-amount').value='';document.getElementById('plan-vendor').value='';document.getElementById('plan-note').value='';await loadData();renderAll();showToast('Plan belanja disimpan.'); }
+async function handleQuoteFileUpload(e){ const file=e.target.files?.[0]; e.target.value=''; if(!file||!activeProjectId)return; const status=document.getElementById('quoteImportStatus'); status.innerHTML='<div class="upload-preview">Membaca file…</div>'; try{ let rows=file.name.toLowerCase().endsWith('.pdf')?await parseQuotePdf(file):await parseQuoteSpreadsheet(file); rows=rows.filter(r=>r.description&&r.total>0); if(!rows.length){status.innerHTML='<div class="upload-preview">Belum bisa menemukan baris budget otomatis. Coba Excel/CSV atau tambah manual.</div>';return;} openQuoteImportPreview(rows,file.name); }catch(err){console.error(err);status.innerHTML='<div class="upload-preview">Gagal membaca file. Pastikan PDF bukan scan gambar dan format Excel punya baris item.</div>';}}
+async function parseQuotePdf(file){ const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise, out=[]; for(let pg=1;pg<=pdf.numPages;pg++){ const page=await pdf.getPage(pg), content=await page.getTextContent(), groups={}; content.items.forEach(it=>{const y=Math.round(it.transform[5]/2)*2;(groups[y] ||= []).push({x:it.transform[4],s:it.str});}); let section='Revenue'; Object.keys(groups).map(Number).sort((a,b)=>b-a).forEach(y=>{const line=groups[y].sort((a,b)=>a.x-b.x).map(x=>x.s).join(' ').replace(/\s+/g,' ').trim(); if(!line)return; if(/PROPOSED TO VENDOR/i.test(line))section='Vendor Fee'; else if(/ESTIMATED MATERIAL/i.test(line))section='Material'; else if(/ESTIMATED TAX/i.test(line))section='Tax & Contingency'; else if(/ESTIMATED GROSS/i.test(line))section='Gross Profit'; const nums=[...line.matchAll(/(?:Rp\s*)?(-?[\d][\d.,]*)\s*Rp?/gi)].map(m=>parseRpLoose(m[1])); if(nums.length>=2&&!/TOTAL BIAYA|GRAND TOTAL|SUMMARY|NO\.|JENIS PEKERJAAN|WORK DESCRIPTION/i.test(line)){const total=nums[nums.length-1],unitPrice=nums[nums.length-2];let desc=line.replace(/(?:Rp\s*)?-?[\d][\d.,]*\s*Rp?/gi,'').replace(/\s+/g,' ').trim();const qm=desc.match(/^(.*?)(?:\s)(\d+(?:[.,]\d+)?)\s+([A-Za-z²³]+)\s*$/);let qty=qm?parseFloat(qm[2].replace(',','.')):1,unit=qm?qm[3]:'unit';if(qm)desc=qm[1].trim();out.push({section,description:desc,qty,unit,unitPrice,total});}});} const seen=new Set(); return out.filter(r=>{const k=[r.section,r.description,r.total].join('|');if(seen.has(k))return false;seen.add(k);return true;}); }
+async function parseQuoteSpreadsheet(file){ const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),out=[]; wb.SheetNames.forEach(sn=>{XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''}).forEach(row=>{const cells=row.map(x=>String(x).trim()).filter(Boolean),joined=cells.join(' | ');let section='Revenue';if(/PROPOSED TO VENDOR|VENDOR|FEE/i.test(joined))section='Vendor Fee';else if(/ESTIMATED MATERIAL|MATERIAL/i.test(joined))section='Material';else if(/ESTIMATED TAX|CONTINGENCY/i.test(joined))section='Tax & Contingency';else if(/GROSS PROFIT/i.test(joined))section='Gross Profit';const nums=cells.map(parseRpLoose).filter(n=>n>0);if(cells.length>=2&&nums.length>=1&&!/TOTAL|SUMMARY|DESCRIPTION|JENIS PEKERJAAN|WORK DESCRIPTION|QTY|VOLUME|UNIT PRICE/i.test(joined)){const total=nums[nums.length-1],unitPrice=nums.length>=2?nums[nums.length-2]:total,desc=cells.find(c=>/[A-Za-zÀ-ÿ]/.test(c)&&!/^Rp/i.test(c)&&!/^\d/.test(c))||cells[0];out.push({section,description:desc,qty:1,unit:'unit',unitPrice,total});}});}); return out; }
+function openQuoteImportPreview(rows,fileName){ const clean=rows.slice(0,100); openModal({title:'Preview hasil baca quote',confirmLabel:`Import ${clean.length} item`,formHtml:`<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">File: ${escapeHtml(fileName)} — periksa hasil deteksi sebelum disimpan.</div><div style="max-height:420px;overflow:auto;border:1px solid var(--line);"><table><thead><tr><th>Bagian</th><th>Item</th><th>Qty</th><th>Unit</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>${clean.map((r,i)=>`<tr><td><select class="qi-prev-section" data-i="${i}"><option ${r.section==='Material'?'selected':''}>Material</option><option ${r.section==='Vendor Fee'?'selected':''}>Vendor Fee</option><option ${r.section==='Revenue'?'selected':''}>Revenue</option><option ${r.section==='Tax & Contingency'?'selected':''}>Tax & Contingency</option><option ${r.section==='Gross Profit'?'selected':''}>Gross Profit</option></select></td><td>${escapeHtml(r.description)}</td><td>${r.qty||1}</td><td>${escapeHtml(r.unit||'unit')}</td><td>${rupiah(r.unitPrice||0)}</td><td>${rupiah(r.total||0)}</td></tr>`).join('')}</tbody></table></div>`,onSubmit:async()=>{const payload=clean.map((r,i)=>({...r,section:document.querySelector(`.qi-prev-section[data-i="${i}"]`).value}));const inserts=payload.map(r=>({user_id:currentUser.id,project_id:activeProjectId,section:r.section,description:r.description,qty:r.qty||1,unit:r.unit||'unit',unit_price:r.unitPrice||0,total:r.total||0,source_file:fileName}));const {error}=await sb.from('project_quote_items').insert(inserts);if(error){console.error(error);showToast('Import gagal. Jalankan SQL migrasi dulu.');return false;}const rev=payload.filter(x=>x.section==='Revenue').reduce((a,x)=>a+x.total,0);if(rev>0)await sb.from('projects').update({quote_amount:rev}).eq('id',activeProjectId);await loadData();renderAll();showToast(`${inserts.length} item quote berhasil diimport.`);}}); }
+function exportMonthlyPlan(){ const proj=getActiveProject();if(!proj){showToast('Pilih proyek dulu.');return;} const month=document.getElementById('summary-month').value||new Date().toISOString().slice(0,7),plans=(state.purchasePlans||[]).filter(p=>p.projectId===activeProjectId&&p.date.slice(0,7)===month),actual=getProjectTransactions().filter(t=>t.date.slice(0,7)===month),items=quoteItemsForProject().filter(q=>q.section==='Material'||q.section==='Vendor Fee'),rows=items.map(q=>({Item:q.description,Bagian:q.section,Budget:q.total,Plan:plans.filter(p=>p.quoteItemId===q.id).reduce((a,p)=>a+p.amount,0),Actual:actual.filter(t=>t.quoteItemId===q.id).reduce((a,t)=>a+t.amount,0)})); const revenue=proj.quoteAmount||0,cost=actual.reduce((a,t)=>a+t.amount,0),gross=revenue-cost,tax=Math.max(gross,0)*0.04,net=gross-tax; const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Proyek:proj.name,Klien:proj.client,Periode:formatMonthLabel(month),'Revenue Quote':revenue,'Actual Cost':cost,'Gross Profit':gross,'Tax 4%':tax,'Net Profit':net}]),'Summary');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{Info:'Belum ada budget item'}]),'Plan vs Actual');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(plans.map(p=>{const q=quoteItemsForProject().find(x=>x.id===p.quoteItemId);return {Tanggal:p.date,Item:q?.description||'',Vendor:p.vendor,Plan:p.amount,Catatan:p.note}})),'Plan Bulanan');XLSX.writeFile(wb,`rekapan-proyek-${proj.name.replace(/\s+/g,'-').toLowerCase()}-${month}.xlsx`);showToast('Rekapan bulanan berhasil diunduh.'); }
 
 // ===================== PROJECTS =====================
 
@@ -1198,7 +1359,7 @@ function openEditProjectQuoteModal(){
       const name=document.getElementById('ep-name').value.trim();
       if(!name){showToast('Nama proyek wajib diisi.');return false;}
       const quote=parseFloat(document.getElementById('ep-quote').value)||0;
-      const {error}=await sb.from('projects').update({name,client:document.getElementById('ep-client').value.trim(),location:document.getElementById('ep-location').value.trim()}).eq('id',proj.id);
+      const {error}=await sb.from('projects').update({name,client:document.getElementById('ep-client').value.trim(),location:document.getElementById('ep-location').value.trim(),quote_amount:quote}).eq('id',proj.id);
       if(error){console.error(error);showToast('Gagal memperbarui proyek.');return false;}
       const existing=state.transactions.filter(t=>t.projectId===proj.id && t.vendor==='__QUOTE__').sort((a,b)=>b.date.localeCompare(a.date));
       if(existing.length){
@@ -1254,7 +1415,7 @@ function renderTxTable(){
     const tr = document.createElement('tr');
     const badgeClass = t.status==='Lunas'?'lunas':(t.status==='DP'?'dp':'belum');
     tr.innerHTML = `
-      <td>${formatDateShort(t.date)}</td><td>${escapeHtml(t.category)}</td><td>${escapeHtml(t.vendor)}</td>
+      <td>${formatDateShort(t.date)}</td><td>${escapeHtml(t.category)}</td><td>${t.quoteItemId ? escapeHtml((quoteItemsForProject().find(q=>q.id===t.quoteItemId)||{}).description||'-') : '<span class="diff-zero">Tidak ada</span>'}</td><td>${escapeHtml(t.vendor)}</td>
       <td>${escapeHtml(t.description)}</td><td class="amount">${rupiah(t.amount)}</td>
       <td><span class="badge ${badgeClass}">${escapeHtml(t.status)}</span></td>
       <td class="row-actions">
@@ -1310,7 +1471,8 @@ async function handleSaveTransaction(){
     category: document.getElementById('f-category').value, vendor, amount, description,
     status: document.getElementById('f-status').value,
     ref: document.getElementById('f-noref').value.trim(),
-    note: document.getElementById('f-note').value.trim()
+    note: document.getElementById('f-note').value.trim(),
+    quote_item_id: document.getElementById('f-quote-item').value || null
   };
   let error;
   if(editingTxId){ ({error} = await sb.from('transactions').update(row).eq('id', editingTxId)); }
@@ -1653,7 +1815,7 @@ function exportProjectExcel(){
   const {tx,payments,month}=getSummaryFilteredData();
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Proyek:proj.name,Klien:proj.client,'Nilai Quote':proj.quoteAmount||0,'Total Credit':payments.reduce((s,p)=>s+p.amount,0),'Total Debit':tx.reduce((s,t)=>s+t.amount,0)}]),'Ringkasan');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(tx.map(t=>({Tanggal:t.date,Kategori:t.category,Vendor:t.vendor,Deskripsi:t.description,Debit:t.amount,Status:t.status,'No Ref':t.ref,Catatan:t.note}))), 'Debit');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(tx.map(t=>({Tanggal:t.date,Kategori:t.category,'Budget Quote':quoteItemsForProject().find(q=>q.id===t.quoteItemId)?.description||'',Vendor:t.vendor,Deskripsi:t.description,Debit:t.amount,Status:t.status,'No Ref':t.ref,Catatan:t.note}))), 'Debit');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(payments.map(p=>({Tanggal:p.date,Jenis:p.type,Metode:p.method,Referensi:p.reference,Credit:p.amount,Catatan:p.note}))), 'Credit');
   XLSX.writeFile(wb,`keuangan-${proj.name.replace(/\s+/g,'-').toLowerCase()}${month?'-'+month:''}.xlsx`);
   showToast('Laporan Excel diunduh.');
@@ -1982,8 +2144,14 @@ function renderInventoryStockTable(){
   document.getElementById('invItemsEmptyMsg').style.display = state.inventoryItems.length ? 'none':'block';
   state.inventoryItems.forEach(item=>{
     const stock = computeItemStock(item.id);
+    const purchases=state.inventoryMovements.filter(m=>m.itemId===item.id && m.type==='Pembelian' && m.cost!=null);
+    const purchasedQty=purchases.reduce((s,m)=>s+m.quantity,0);
+    const purchasedCost=purchases.reduce((s,m)=>s+Number(m.cost||0),0);
+    const avg=purchasedQty?purchasedCost/purchasedQty:0;
+    const value=Math.max(stock,0)*avg;
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.unit)}</td><td class="amount">${stock.toLocaleString('id-ID')}</td>
+      <td class="amount">${avg?rupiah(avg):'-'}</td><td class="amount">${value?rupiah(value):'-'}</td>
       <td class="row-actions"><button class="icon-btn" data-a="del" title="Hapus alat">✕</button></td>`;
     tr.querySelector('[data-a="del"]').addEventListener('click', ()=>openConfirmDeleteItem(item));
     body.appendChild(tr);
@@ -2074,6 +2242,7 @@ async function handleSaveMovement(){
   document.getElementById('mv-qty').value = '';
   document.getElementById('mv-vendor').value = '';
   document.getElementById('mv-cost').value = '';
+  document.getElementById('mv-unit-cost').value = '';
   document.getElementById('mv-note').value = '';
   document.getElementById('mv-date').value = todayISO();
   await loadData(); renderAll();
@@ -2093,7 +2262,7 @@ function openConfirmDeleteMovement(m){
 
 function exportInventoryExcel(){
   if(!state.inventoryItems.length){ showToast('Belum ada alat untuk diekspor.'); return; }
-  const stockRows = state.inventoryItems.map(i=>({ 'Nama Alat':i.name, Satuan:i.unit, 'Stok Sistem': computeItemStock(i.id) }));
+  const stockRows = state.inventoryItems.map(i=>{ const p=state.inventoryMovements.filter(m=>m.itemId===i.id&&m.type==='Pembelian'&&m.cost!=null); const q=p.reduce((a,m)=>a+m.quantity,0), c=p.reduce((a,m)=>a+Number(m.cost||0),0); const avg=q?c/q:0; return { 'Nama Alat':i.name, Satuan:i.unit, 'Stok Sistem':computeItemStock(i.id), 'Harga Rata-rata':avg, 'Nilai Stok':Math.max(computeItemStock(i.id),0)*avg }; });
   const mvRows = state.inventoryMovements.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(m=>{
     const item = state.inventoryItems.find(i=>i.id===m.itemId);
     const proj = state.projects.find(p=>p.id===m.projectId);
@@ -2274,9 +2443,19 @@ function setupAppEvents(){
   });
   document.getElementById('exportPettyCashExcel').addEventListener('click', exportPettyCashExcel);
 
+  // quote / planning
+  document.getElementById('uploadQuoteBtn').addEventListener('click', ()=>document.getElementById('quoteFileInput').click());
+  document.getElementById('quoteFileInput').addEventListener('change', handleQuoteFileUpload);
+  document.getElementById('addQuoteItemBtn').addEventListener('click', openAddQuoteItemModal);
+  document.getElementById('savePlanBtn').addEventListener('click', handleSavePurchasePlan);
+  document.getElementById('exportMonthlyPlanBtn').addEventListener('click', exportMonthlyPlan);
+  document.getElementById('plan-date').value = todayISO();
+
   // inventory
   document.getElementById('addInventoryItemBtn').addEventListener('click', handleAddInventoryItem);
   document.getElementById('mv-type').addEventListener('change', toggleMovementFields);
+  document.getElementById('mv-qty').addEventListener('input', updateInventoryUnitCost);
+  document.getElementById('mv-cost').addEventListener('input', updateInventoryUnitCost);
   document.getElementById('saveMovementBtn').addEventListener('click', handleSaveMovement);
   document.getElementById('mvfilter-item').addEventListener('change', renderInventoryMovementTable);
   document.getElementById('mvfilter-type').addEventListener('change', renderInventoryMovementTable);
