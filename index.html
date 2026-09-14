@@ -326,9 +326,26 @@
   .section-pill{display:inline-block;padding:3px 7px;border:1px solid var(--line);font-size:10px;font-weight:600}
   .upload-preview{background:#faf8f2;border:1px dashed var(--line);padding:12px;margin-top:10px;font-size:12px}
   .kpi-note{font-size:11px;color:var(--muted);margin-top:4px}
-  .actual-detail{font-size:11px;line-height:1.45;color:var(--muted);margin-top:5px;padding-left:10px;border-left:2px solid var(--line)}
-  .actual-detail strong{color:var(--ink)}
-  .status-ok{color:var(--ok);font-weight:700}.status-over{color:var(--warn);font-weight:700}.status-pending{color:var(--sand);font-weight:700}
+
+  .quote-reality-table th,.quote-reality-table td{vertical-align:top;}
+  .quote-reality-table .num-col{width:42px;text-align:center;font-weight:600;}
+  .quote-reality-table .desc-col{min-width:230px;}
+  .quote-reality-table .money-col{min-width:125px;text-align:right;vertical-align:top;font-variant-numeric:tabular-nums;}
+  .quote-reality-table .reality-col{min-width:290px;}
+  .reality-entry{padding:7px 0;border-bottom:1px solid #eee8dc;}
+  .reality-entry:last-child{border-bottom:none;}
+  .reality-entry-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;}
+  .reality-amount{font-weight:700;white-space:nowrap;color:var(--ink);}
+  .reality-desc{font-weight:600;}
+  .reality-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+  .reality-empty{color:var(--muted);font-style:italic;font-size:12px;padding:8px 0;}
+  .balance-cell{font-weight:700;text-align:right;font-variant-numeric:tabular-nums;}
+  .balance-positive{background:#fff2bf;color:#735b00;}
+  .balance-zero{background:#e2ede4;color:var(--ok);}
+  .balance-negative{background:#f4e0d8;color:var(--warn);}
+  .quote-total-row td{font-weight:700;border-top:2px solid var(--ink);background:#faf8f2;}
+  .quote-reality-note{font-size:12px;color:var(--muted);margin-top:10px;}
+  .download-reality-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
 </style>
 </head>
 <body>
@@ -356,9 +373,7 @@
       <p class="brand-sub">Keuangan & transaksi proyek</p>
     </div>
     <div class="side-nav" id="sideNav">
-      <button class="side-nav-btn active" data-nav="general">📊 Dashboard General</button>
-      <button class="side-nav-btn" data-nav="ringkasan">📁 Proyek & Profit</button>
-      <button class="side-nav-btn" data-nav="maintenance">🧰 Dashboard Maintenance</button>
+      <button class="side-nav-btn active" data-nav="ringkasan">📊 Dashboard Maintenance</button>
       <button class="side-nav-btn" data-nav="pengeluaran">💸 Expenses General</button>
       <button class="side-nav-btn" data-nav="pettycash">💰 Petty Cash General</button>
       <button class="side-nav-btn" data-nav="inventory">📦 Inventory General</button>
@@ -381,7 +396,7 @@
       </div>
       <div class="stamp">
         <div id="todayDate"></div>
-        <div>Buku Nota v4 — Quote vs Realita</div>
+        <div>Buku Nota v3 — One File</div>
       </div>
     </div>
 
@@ -394,48 +409,8 @@
     </div>
 
     <div id="tabContent">
-      <!-- DASHBOARD GENERAL -->
-      <div class="tab-panel active" data-panel="general">
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-            <div>
-              <h2 style="margin:0 0 4px;">Dashboard General — Profit Bulanan</h2>
-              <p class="hint" style="margin:0;">Ringkasan bulanan seluruh proyek. Profit General dihitung dari uang masuk proyek yang benar-benar tercatat dikurangi realita biaya proyek, lalu Tax 4% dari gross profit positif.</p>
-            </div>
-            <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
-              <div><label for="general-month">Bulan</label><input type="month" id="general-month"></div>
-              <button class="btn secondary small" id="generalClearMonthBtn">Semua periode</button>
-              <button class="btn small" id="exportGeneralMonthlyBtn">⬇ Download Summary Bulanan</button>
-            </div>
-          </div>
-          <div class="summary-grid" style="margin-top:16px;">
-            <div class="stat"><div class="label">Uang Masuk Proyek (Actual)</div><div class="value" id="general-revenue">Rp 0</div></div>
-            <div class="stat"><div class="label">Realita Biaya Proyek</div><div class="value warn" id="general-cost">Rp 0</div></div>
-            <div class="stat"><div class="label">Gross Profit</div><div class="value ok" id="general-gross">Rp 0</div></div>
-            <div class="stat"><div class="label">Net Profit Setelah Tax 4%</div><div class="value ok" id="general-net">Rp 0</div></div>
-          </div>
-          <div class="summary-grid" style="grid-template-columns:repeat(3,1fr);">
-            <div class="stat"><div class="label">Total Tax 4%</div><div class="value warn" id="general-tax">Rp 0</div></div>
-            <div class="stat"><div class="label">Uang Masuk / Credit Bulan Ini</div><div class="value ok" id="general-paid">Rp 0</div></div>
-            <div class="stat"><div class="label">Proyek Aktif di Periode</div><div class="value" id="general-project-count">0</div></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>Profit per Project — Quote vs Realita</h2>
-          <p class="hint">Ini yang akan menjadi sumber utama Summary General. Realita biaya diambil dari transaksi biaya proyek yang sudah dicatat.</p>
-          <div style="overflow-x:auto;">
-            <table>
-              <thead><tr><th>Project</th><th class="amount">Quote Revenue</th><th class="amount">Quote Cost</th><th class="amount">Realita Cost</th><th class="amount">Gross Profit</th><th class="amount">Tax 4%</th><th class="amount">Net Profit</th><th>Status</th></tr></thead>
-              <tbody id="generalProjectProfitBody"></tbody>
-            </table>
-          </div>
-          <div class="empty" id="generalProjectProfitEmpty" style="display:none;">Belum ada data proyek pada periode ini.</div>
-        </div>
-      </div>
-
       <!-- TRANSAKSI -->
-      <div class="tab-panel" data-panel="input">
+      <div class="tab-panel active" data-panel="input">
         <div id="tx-noProjectMsg" class="card" style="display:none;">
           <p style="margin:0;color:var(--muted);">Tambahkan proyek dulu di sebelah kiri sebelum mulai mencatat transaksi.</p>
         </div>
@@ -458,8 +433,8 @@
                 </select>
               </div>
               <div>
-                <label for="f-quote-item">Item Quote yang dibeli <span style="color:var(--warn);">*</span></label>
-                <select id="f-quote-item"><option value="">— Pilih item quote yang dibeli —</option></select><div class="kpi-note">Wajib dipilih bila proyek sudah punya Quote, supaya nota masuk ke nomor item yang benar.</div>
+                <label for="f-quote-item">Budget dari Quote (opsional)</label>
+                <select id="f-quote-item"><option value="">— Tidak dikaitkan —</option></select>
               </div>
               <div>
                 <label for="f-vendor">Vendor / Toko</label>
@@ -696,14 +671,14 @@
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
               <div>
                 <h2 style="margin:0 0 4px;">Plan Belanja Bulanan</h2>
-                <p class="hint" style="margin:0;">Tentukan kapan item quote akan dibeli. Nilai Plan otomatis sama dengan nilai Quote; nanti Realita diambil dari nota yang kamu masukkan.</p>
+                <p class="hint" style="margin:0;">Tentukan kapan item quote akan dibeli dan berapa rencana belanjanya. Nanti otomatis dibandingkan dengan aktual.</p>
               </div>
               <button class="btn secondary small" id="exportMonthlyPlanBtn">⬇ Download Rekapan Bulanan</button>
             </div>
             <div class="form-grid" style="margin-top:14px;">
               <div><label for="plan-date">Tanggal rencana</label><input type="date" id="plan-date"></div>
               <div><label for="plan-item">Item Quote</label><select id="plan-item"><option value="">Pilih item quote</option></select></div>
-              <div><label for="plan-amount">Plan / Budget (Rp)</label><input type="number" id="plan-amount" min="0" placeholder="otomatis dari Quote" readonly><div class="kpi-note">Nilainya otomatis sama dengan Quote item.</div></div>
+              <div><label for="plan-amount">Rencana belanja (Rp)</label><input type="number" id="plan-amount" min="0" placeholder="0"></div>
               <div><label for="plan-vendor">Vendor rencana (opsional)</label><input type="text" id="plan-vendor" placeholder="Toko / supplier"></div>
               <div class="full"><label for="plan-note">Catatan</label><input type="text" id="plan-note" placeholder="mis. beli minggu pertama bulan depan"></div>
             </div>
@@ -719,16 +694,10 @@
 
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-              <div>
-                <h2 style="margin:0 0 4px;">Quote vs Realita & Profit Proyek</h2>
-                <p class="hint" style="margin:0;">Plan otomatis sama dengan nilai Quote. Setiap nota aktual dikaitkan ke item quote supaya terlihat apa yang harus dibeli, apa yang sudah dibeli, harga realita, dan apakah masih sesuai budget.</p>
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="btn secondary small" id="exportQuoteRealityExcelBtn">⬇ Excel Quote vs Realita</button>
-                <button class="btn small" id="exportQuoteRealityPdfBtn">⬇ PDF Quote vs Realita</button>
-              </div>
+              <h2 style="margin:0;">Quote vs Realita & Profit Proyek</h2>
+              <div class="download-reality-actions" style="margin:0;"><button class="btn secondary small" id="exportQuoteRealityExcelBtn">⬇ Excel Quote vs Realita</button><button class="btn secondary small" id="exportQuoteRealityPdfBtn">⬇ PDF Quote vs Realita</button></div>
             </div>
-            <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);margin-top:16px;">
+            <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);">
               <div class="stat"><div class="label">Actual Project Cost</div><div class="value warn" id="profit-actual-cost">Rp 0</div></div>
               <div class="stat"><div class="label">Gross Profit Actual</div><div class="value ok" id="profit-gross">Rp 0</div></div>
               <div class="stat"><div class="label">Tax 4%</div><div class="value warn" id="profit-tax">Rp 0</div></div>
@@ -736,12 +705,11 @@
             </div>
             <div style="overflow-x:auto;margin-top:10px;">
               <table>
-                <thead><tr><th>No.</th><th>Deskripsi Quote / Yang Harus Dibeli</th><th>Bagian</th><th class="amount">Quote</th><th class="amount">Plan</th><th>Realita / Nota</th><th class="amount">Sisa Budget</th><th class="amount">Selisih</th><th>Status</th></tr></thead>
+                <thead><tr><th class="num-col">No.</th><th class="desc-col">Deskripsi Quote / Yang Harus Dibeli</th><th>Bagian</th><th class="money-col">Quote</th><th class="money-col">Plan</th><th class="reality-col">Realita / Nota</th><th class="money-col">Sisa Budget</th><th class="money-col">Selisih</th></tr></thead>
                 <tbody id="planActualBody"></tbody>
               </table>
             </div>
             <div class="empty" id="planActualEmpty" style="display:none;">Belum ada budget item untuk dibandingkan.</div>
-            <div class="kpi-note" style="margin-top:10px;">💡 <strong>Cara pakai:</strong> lihat nomor item dari Quote → saat membeli, pilih item Quote tersebut di form transaksi → masukkan vendor, deskripsi nota, nomor nota, dan nominal aktual. Kolom Realita akan otomatis menampilkan pembeliannya.</div>
           </div>
 
           <div class="card">
@@ -1247,8 +1215,7 @@ function renderTitleBlock(){
       bits.push(`<span>Quote: <b>${rupiah(proj.quoteAmount||0)}</b></span>`);
       if(proj.location) bits.push(`<span>Lokasi: <b>${escapeHtml(proj.location)}</b></span>`);
     }
-  }else if(currentSection==='general') title='Dashboard General — Profit Bulanan';
-  else if(currentSection==='input') title=proj ? 'Biaya Proyek — '+proj.name : 'Biaya Proyek';
+  }else if(currentSection==='input') title=proj ? 'Biaya Proyek — '+proj.name : 'Biaya Proyek';
   else if(currentSection==='maintenance') title='Maintenance Dashboard';
   else if(currentSection==='pengeluaran') title='Expenses General';
   else if(currentSection==='pettycash') title='Petty Cash General';
@@ -1257,7 +1224,6 @@ function renderTitleBlock(){
   document.getElementById('activeProjectMeta').innerHTML = bits.join('');
   const hasProj = !!proj;
   document.getElementById('tx-noProjectMsg').style.display = currentSection==='input' && !hasProj ? 'block':'none';
-  const generalPanel=document.querySelector('.tab-panel[data-panel="general"]'); if(generalPanel) generalPanel.style.display=currentSection==='general'?'block':'';
   document.getElementById('tx-content').style.display = currentSection==='input' && hasProj ? 'block':'none';
   document.getElementById('ex-noProjectMsg').style.display = 'none';
   document.getElementById('ex-content').style.display = currentSection==='pengeluaran' ? 'block':'none';
@@ -1275,68 +1241,11 @@ function renderAll(){
   renderTxTable();
   renderExpTable();
   renderSummary();
-  renderGeneralDashboard();
   renderPettyCash();
   renderInventoryAll();
   renderQuoteData();
   renderMaintenance();
   renderTitleBlock();
-}
-
-// ===================== GENERAL MONTHLY PROFIT =====================
-function getGeneralMonth(){ return document.getElementById('general-month')?.value || ''; }
-function getProjectMonthData(project, month){
-  const tx=state.transactions.filter(t=>t.projectId===project.id && t.vendor!=='__PAYMENT__' && t.vendor!=='__QUOTE__' && t.vendor!=='__MAINTENANCE__' && (!month || t.date.slice(0,7)===month));
-  const payments=state.projectPayments.filter(p=>p.projectId===project.id && (!month || p.date.slice(0,7)===month));
-  const quoteItems=(state.quoteItems||[]).filter(q=>q.projectId===project.id);
-  const quoteCost=quoteItems.filter(q=>q.section==='Material'||q.section==='Vendor Fee'||q.section==='Tax & Contingency').reduce((s,q)=>s+Number(q.total||0),0);
-  const revenue=Number(project.quoteAmount||0);
-  const actualCost=tx.reduce((s,t)=>s+Number(t.amount||0),0);
-  const paid=payments.reduce((s,p)=>s+Number(p.amount||0),0);
-  const gross=revenue-actualCost;
-  const tax=Math.max(gross,0)*0.04;
-  const net=gross-tax;
-  return {tx,payments,quoteCost,revenue,actualCost,paid,gross,tax,net};
-}
-function renderGeneralDashboard(){
-  const body=document.getElementById('generalProjectProfitBody'); if(!body)return;
-  const month=getGeneralMonth(); body.innerHTML='';
-  const rows=state.projects.map(p=>({p,d:getProjectMonthData(p,month)})).filter(x=>{
-    if(!month)return true;
-    return x.d.tx.length||x.d.payments.length||x.p.createdAt?.slice(0,7)===month;
-  });
-  document.getElementById('generalProjectProfitEmpty').style.display=rows.length?'none':'block';
-  let revenue=0,cost=0,gross=0,tax=0,net=0,paid=0;
-  rows.forEach(({p,d})=>{
-    revenue+=d.paid; cost+=d.actualCost; gross+=d.paid-d.actualCost; tax+=Math.max(d.paid-d.actualCost,0)*0.04; net+=(d.paid-d.actualCost)-Math.max(d.paid-d.actualCost,0)*0.04; paid+=d.paid;
-    const status=d.gross<0?'RUGI':(d.actualCost>d.quoteCost&&d.quoteCost>0?'OVER BUDGET':'UNTUNG');
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td><strong>${escapeHtml(p.name)}</strong><div style="font-size:11px;color:var(--muted)">${escapeHtml(p.client||'')}</div></td><td class="amount">${rupiah(d.revenue)}</td><td class="amount">${rupiah(d.quoteCost)}</td><td class="amount">${rupiah(d.actualCost)}</td><td class="amount ${d.gross<0?'budget-over':'budget-ok'}">${rupiah(d.gross)}</td><td class="amount">${rupiah(d.tax)}</td><td class="amount ${d.net<0?'budget-over':'budget-ok'}">${rupiah(d.net)}</td><td><span class="${d.gross<0||status==='OVER BUDGET'?'budget-over':'budget-ok'}">${status}</span></td>`;
-    tr.addEventListener('click',()=>{activeProjectId=p.id;activatePanel('ringkasan');renderAll();});
-    tr.style.cursor='pointer'; body.appendChild(tr);
-  });
-  document.getElementById('general-revenue').textContent=rupiah(revenue);
-  document.getElementById('general-cost').textContent=rupiah(cost);
-  document.getElementById('general-gross').textContent=rupiah(gross);
-  document.getElementById('general-tax').textContent=rupiah(tax);
-  document.getElementById('general-net').textContent=rupiah(net);
-  document.getElementById('general-paid').textContent=rupiah(paid);
-  document.getElementById('general-project-count').textContent=String(rows.length);
-  document.getElementById('general-gross').className='value '+(gross<0?'warn':'ok');
-  document.getElementById('general-net').className='value '+(net<0?'warn':'ok');
-}
-function exportGeneralMonthly(){
-  const month=getGeneralMonth()||new Date().toISOString().slice(0,7);
-  const rows=state.projects.map(p=>({p,d:getProjectMonthData(p,month)})).filter(x=>x.d.tx.length||x.d.payments.length||x.p.createdAt?.slice(0,7)===month);
-  if(!rows.length){showToast('Belum ada data proyek pada periode ini.');return;}
-  const summary=rows.map(({p,d})=>({Project:p.name,Klien:p.client,Periode:formatMonthLabel(month),'Uang Masuk Proyek':d.paid,'Quote Revenue Reference':d.revenue,'Quote Cost':d.quoteCost,'Realita Cost':d.actualCost,'Variance Cost':d.actualCost-d.quoteCost,'Gross Profit Bulanan':d.paid-d.actualCost,'Tax 4%':Math.max(d.paid-d.actualCost,0)*0.04,'Net Profit Bulanan':(d.paid-d.actualCost)-Math.max(d.paid-d.actualCost,0)*0.04,Status:d.gross<0?'RUGI':(d.actualCost>d.quoteCost&&d.quoteCost>0?'OVER BUDGET':'UNTUNG')}));
-  const detail=[];
-  rows.forEach(({p,d})=>d.tx.forEach(t=>detail.push({Project:p.name,Tanggal:t.date,Kategori:t.category,Vendor:t.vendor,Deskripsi:t.description,'Realita Cost':t.amount,'Budget Item':quoteItemsForProject().find(q=>q.id===t.quoteItemId)?.description||'',Status:t.status})));
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),'Summary Project');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detail.length?detail:[{Info:'Tidak ada transaksi biaya pada periode ini'}]),'Realita Biaya');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Periode:formatMonthLabel(month),'Total Uang Masuk Proyek':summary.reduce((s,r)=>s+r['Uang Masuk Proyek'],0),'Total Realita Cost':summary.reduce((s,r)=>s+r['Realita Cost'],0),'Gross Profit Bulanan':summary.reduce((s,r)=>s+r['Gross Profit Bulanan'],0),'Tax 4%':summary.reduce((s,r)=>s+r['Tax 4%'],0),'Net Profit Bulanan':summary.reduce((s,r)=>s+r['Net Profit Bulanan'],0)}]),'Total Bulanan');
-  XLSX.writeFile(wb,`summary-general-${month}.xlsx`); showToast('Summary general bulanan berhasil diunduh.');
 }
 
 // ===================== MODAL HELPER =====================
@@ -1391,11 +1300,10 @@ function actualByQuoteItem(){ const map={}; getProjectTransactions().forEach(t=>
 function planByQuoteItem(){ const map={}; (state.purchasePlans||[]).filter(p=>p.projectId===activeProjectId).forEach(p=>{map[p.quoteItemId]=(map[p.quoteItemId]||0)+Number(p.amount||0);}); return map; }
 function renderQuoteItemSelects(){
   const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee');
-  const opts='<option value="">— Pilih item quote yang dibeli —</option>'+items.map((x,i)=>`<option value="${x.id}">${i+1}. ${escapeHtml(x.description)} — ${rupiah(x.total)}</option>`).join('');
+  const opts='<option value="">— Tidak dikaitkan —</option>'+items.map(x=>`<option value="${x.id}">${escapeHtml(x.description)} — ${rupiah(x.total)}</option>`).join('');
   const el=document.getElementById('f-quote-item'); if(el) el.innerHTML=opts;
-  const pl=document.getElementById('plan-item'); if(pl) pl.innerHTML='<option value="">Pilih item quote</option>'+items.map((x,i)=>`<option value="${x.id}">${i+1}. ${escapeHtml(x.description)} — ${rupiah(x.total)}</option>`).join('');
+  const pl=document.getElementById('plan-item'); if(pl) pl.innerHTML='<option value="">Pilih item quote</option>'+items.map(x=>`<option value="${x.id}">${escapeHtml(x.description)} — ${rupiah(x.total)}</option>`).join('');
 }
-
 function renderQuoteItems(){
   const body=document.getElementById('quoteItemsBody'); if(!body)return; body.innerHTML='';
   const items=quoteItemsForProject(); document.getElementById('quoteItemsEmpty').style.display=items.length?'none':'block';
@@ -1409,31 +1317,57 @@ function renderPurchasePlans(){
   list.forEach(p=>{ const q=quoteItemsForProject().find(x=>x.id===p.quoteItemId); const tr=document.createElement('tr'); tr.innerHTML=`<td>${formatDateShort(p.date)}</td><td>${q?escapeHtml(q.description):'Item terhapus'}</td><td>${escapeHtml(p.vendor||'-')}</td><td class="amount">${rupiah(p.amount)}</td><td>${escapeHtml(p.note||'')}</td><td><button class="icon-btn" title="Hapus">✕</button></td>`; tr.querySelector('button').addEventListener('click',()=>openConfirmDeletePurchasePlan(p)); body.appendChild(tr); });
 }
 function renderPlanActual(){
-  const body=document.getElementById('planActualBody'); if(!body)return; body.innerHTML='';
+  const body=document.getElementById('planActualBody'); if(!body)return;
+  body.innerHTML='';
   const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee');
-  const am=actualByQuoteItem(), tx=getProjectTransactions();
   document.getElementById('planActualEmpty').style.display=items.length?'none':'block';
-  let quoteCost=0, actualCost=0;
-  items.forEach((q,index)=>{
-    const quote=Number(q.total||0), plan=quote, actual=Number(am[q.id]||0);
-    quoteCost+=quote; actualCost+=actual;
-    const remaining=quote-actual, variance=actual-quote, pct=quote>0?(actual/quote*100):0;
-    const actualTx=tx.filter(t=>t.quoteItemId===q.id).sort((a,b)=>b.date.localeCompare(a.date));
-    let status='BELUM DIBELI', statusClass='status-pending';
-    if(actual>quote){status='RUGI / OVER BUDGET';statusClass='status-over';}
-    else if(actual>0){status='TERKENDALI';statusClass='status-ok';}
-    const detail=actualTx.length?actualTx.map(t=>`<div class="actual-detail"><strong>${formatDateShort(t.date)}</strong> — ${escapeHtml(t.description||'Pembelian')}<br>Vendor: ${escapeHtml(t.vendor||'-')} · Nota: ${escapeHtml(t.ref||'-')} · <strong>${rupiah(t.amount||0)}</strong>${t.note?`<br>Catatan: ${escapeHtml(t.note)}`:''}</div>`).join(''):'<div class="actual-detail">Belum ada nota/biaya aktual untuk item ini.</div>';
+  let totalQuote=0,totalPlan=0,totalActual=0;
+  const txs=getProjectTransactions().slice().sort((a,b)=>a.date.localeCompare(b.date));
+
+  items.forEach((q,idx)=>{
+    const budget=Number(q.total||0);
+    // Plan selalu mengikuti nilai Quote. Monthly purchase planning tetap menjadi jadwal pembelian,
+    // tetapi angka Plan pada kontrol Quote vs Realita adalah budget quote.
+    const plan=budget;
+    const actualRows=txs.filter(t=>t.quoteItemId===q.id);
+    const actual=actualRows.reduce((s,t)=>s+Number(t.amount||0),0);
+    const remaining=plan-actual;
+    const variance=actual-plan;
+    const balanceClass=remaining<0?'balance-negative':(remaining===0?'balance-zero':'balance-positive');
+
+    totalQuote+=budget; totalPlan+=plan; totalActual+=actual;
+
+    const realityHtml=actualRows.length
+      ? actualRows.map(t=>`<div class="reality-entry">
+          <div class="reality-entry-top"><span class="reality-desc">${escapeHtml(t.description||'Pembelian')}</span><span class="reality-amount">${rupiah(t.amount)}</span></div>
+          <div class="reality-meta">${formatDateShort(t.date)}${t.vendor?' — Vendor: '+escapeHtml(t.vendor):''}${t.ref?' — Nota: '+escapeHtml(t.ref):''}</div>
+          ${t.note?`<div class="reality-meta">Catatan: ${escapeHtml(t.note)}</div>`:''}
+        </div>`).join('')
+      : '<div class="reality-empty">Belum dibeli / belum ada nota</div>';
+
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${index+1}</td><td><strong>${escapeHtml(q.description)}</strong></td><td>${escapeHtml(q.section)}</td><td class="amount">${rupiah(quote)}</td><td class="amount">${rupiah(plan)}</td><td class="amount"><strong>${rupiah(actual)}</strong>${detail}</td><td class="amount ${remaining<0?'budget-over':'budget-ok'}">${rupiah(remaining)}</td><td class="amount ${variance>0?'budget-over':'budget-ok'}">${variance>0?'+':''}${rupiah(variance)}<div style="font-size:11px;color:var(--muted);">${pct.toFixed(1)}%</div></td><td><span class="${statusClass}">${status}</span></td>`;
+    tr.innerHTML=`
+      <td class="num-col">${idx+1}</td>
+      <td class="desc-col"><strong>${escapeHtml(q.description)}</strong></td>
+      <td>${escapeHtml(q.section)}</td>
+      <td class="money-col">${rupiah(budget)}</td>
+      <td class="money-col">${rupiah(plan)}</td>
+      <td class="reality-col">${realityHtml}<div style="border-top:1px solid var(--line);margin-top:5px;padding-top:6px;display:flex;justify-content:space-between;gap:10px;font-weight:700;"><span>Total Realita</span><span>${rupiah(actual)}</span></div></td>
+      <td class="balance-cell ${balanceClass}">${rupiah(remaining)}</td>
+      <td class="money-col ${variance>0?'budget-over':(variance<0?'budget-ok':'diff-zero')}">${variance>0?'+':''}${rupiah(variance)}<div class="kpi-note">${plan>0?(actual/plan*100).toFixed(1):'0.0'}% realita</div></td>`;
     body.appendChild(tr);
   });
-  if(items.length){
-    const tr=document.createElement('tr'); tr.style.fontWeight='700';
-    const diff=actualCost-quoteCost, remaining=quoteCost-actualCost;
-    tr.innerHTML=`<td colspan="3">TOTAL COST</td><td class="amount">${rupiah(quoteCost)}</td><td class="amount">${rupiah(quoteCost)}</td><td class="amount">${rupiah(actualCost)}</td><td class="amount ${remaining<0?'budget-over':'budget-ok'}">${rupiah(remaining)}</td><td class="amount ${diff>0?'budget-over':'budget-ok'}">${diff>0?'+':''}${rupiah(diff)}</td><td>${diff>0?'<span class="status-over">OVER BUDGET</span>':'<span class="status-ok">TERKENDALI</span>'}</td>`;
-    body.appendChild(tr);
-  }
+
+  const totalRemaining=totalPlan-totalActual;
+  const totalVariance=totalActual-totalPlan;
+  const totalBalanceClass=totalRemaining<0?'balance-negative':(totalRemaining===0?'balance-zero':'balance-positive');
+  const totalTr=document.createElement('tr');
+  totalTr.className='quote-total-row';
+  totalTr.innerHTML=`<td colspan="3">TOTAL COST</td><td class="money-col">${rupiah(totalQuote)}</td><td class="money-col">${rupiah(totalPlan)}</td><td class="money-col">${rupiah(totalActual)}</td><td class="balance-cell ${totalBalanceClass}">${rupiah(totalRemaining)}</td><td class="money-col ${totalVariance>0?'budget-over':(totalVariance<0?'budget-ok':'diff-zero')}">${totalVariance>0?'+':''}${rupiah(totalVariance)}</td>`;
+  body.appendChild(totalTr);
+
   const revenue=Number(getActiveProject()?.quoteAmount||quoteBudgetTotals().revenue||0);
+  const actualCost=getProjectTransactions().reduce((s,t)=>s+Number(t.amount||0),0);
   const gross=revenue-actualCost, tax=Math.max(gross,0)*0.04, net=gross-tax;
   document.getElementById('profit-actual-cost').textContent=rupiah(actualCost);
   document.getElementById('profit-gross').textContent=rupiah(gross);
@@ -1442,7 +1376,6 @@ function renderPlanActual(){
   document.getElementById('profit-gross').className='value '+(gross<0?'warn':'ok');
   document.getElementById('profit-net').className='value '+(net<0?'warn':'ok');
 }
-
 function renderQuoteData(){ renderQuoteItemSelects(); renderQuoteItems(); renderPurchasePlans(); renderPlanActual(); }
 function openAddQuoteItemModal(){
   if(!activeProjectId){showToast('Pilih proyek dulu.');return;}
@@ -1450,61 +1383,62 @@ function openAddQuoteItemModal(){
 }
 function openConfirmDeleteQuoteItem(q){ openModal({title:'Hapus budget item?',body:`${escapeHtml(q.description)} — ${rupiah(q.total)}`,confirmLabel:'Hapus',onConfirm:async()=>{const {error}=await sb.from('project_quote_items').delete().eq('id',q.id);if(error){console.error(error);showToast('Gagal menghapus budget item.');return;}await loadData();renderAll();showToast('Budget item dihapus.');}}); }
 function openConfirmDeletePurchasePlan(p){ openModal({title:'Hapus plan belanja?',body:`${formatDateShort(p.date)} — ${rupiah(p.amount)}`,confirmLabel:'Hapus',onConfirm:async()=>{const {error}=await sb.from('project_purchase_plans').delete().eq('id',p.id);if(error){console.error(error);showToast('Gagal menghapus plan.');return;}await loadData();renderAll();showToast('Plan belanja dihapus.');}}); }
-async function handleSavePurchasePlan(){ if(!activeProjectId){showToast('Pilih proyek dulu.');return;} const date=document.getElementById('plan-date').value||todayISO(), quoteItemId=document.getElementById('plan-item').value, quoteItem=quoteItemsForProject().find(q=>q.id===quoteItemId), amount=Number(quoteItem?.total||0); if(!quoteItemId||amount<=0){showToast('Pilih item quote dan isi jumlah plan.');return;} const {error}=await sb.from('project_purchase_plans').insert({user_id:currentUser.id,project_id:activeProjectId,quote_item_id:quoteItemId,date,amount,vendor:document.getElementById('plan-vendor').value.trim(),note:document.getElementById('plan-note').value.trim()}); if(error){console.error(error);showToast('Gagal menyimpan plan. Jalankan SQL migrasi dulu.');return;} document.getElementById('plan-amount').value='';document.getElementById('plan-vendor').value='';document.getElementById('plan-note').value='';await loadData();renderAll();showToast('Plan belanja disimpan.'); }
+async function handleSavePurchasePlan(){ if(!activeProjectId){showToast('Pilih proyek dulu.');return;} const date=document.getElementById('plan-date').value||todayISO(), quoteItemId=document.getElementById('plan-item').value, amount=Number(document.getElementById('plan-amount').value)||0; if(!quoteItemId||amount<=0){showToast('Pilih item quote dan isi jumlah plan.');return;} const {error}=await sb.from('project_purchase_plans').insert({user_id:currentUser.id,project_id:activeProjectId,quote_item_id:quoteItemId,date,amount,vendor:document.getElementById('plan-vendor').value.trim(),note:document.getElementById('plan-note').value.trim()}); if(error){console.error(error);showToast('Gagal menyimpan plan. Jalankan SQL migrasi dulu.');return;} document.getElementById('plan-amount').value='';document.getElementById('plan-vendor').value='';document.getElementById('plan-note').value='';await loadData();renderAll();showToast('Plan belanja disimpan.'); }
 async function handleQuoteFileUpload(e){ const file=e.target.files?.[0]; e.target.value=''; if(!file||!activeProjectId)return; const status=document.getElementById('quoteImportStatus'); status.innerHTML='<div class="upload-preview">Membaca file…</div>'; try{ let rows=file.name.toLowerCase().endsWith('.pdf')?await parseQuotePdf(file):await parseQuoteSpreadsheet(file); rows=rows.filter(r=>r.description&&r.total>0); if(!rows.length){status.innerHTML='<div class="upload-preview">Belum bisa menemukan baris budget otomatis. Coba Excel/CSV atau tambah manual.</div>';return;} openQuoteImportPreview(rows,file.name); }catch(err){console.error(err);status.innerHTML='<div class="upload-preview">Gagal membaca file. Pastikan PDF bukan scan gambar dan format Excel punya baris item.</div>';}}
 async function parseQuotePdf(file){ const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise, out=[]; for(let pg=1;pg<=pdf.numPages;pg++){ const page=await pdf.getPage(pg), content=await page.getTextContent(), groups={}; content.items.forEach(it=>{const y=Math.round(it.transform[5]/2)*2;(groups[y] ||= []).push({x:it.transform[4],s:it.str});}); let section='Revenue'; Object.keys(groups).map(Number).sort((a,b)=>b-a).forEach(y=>{const line=groups[y].sort((a,b)=>a.x-b.x).map(x=>x.s).join(' ').replace(/\s+/g,' ').trim(); if(!line)return; if(/PROPOSED TO VENDOR/i.test(line))section='Vendor Fee'; else if(/ESTIMATED MATERIAL/i.test(line))section='Material'; else if(/ESTIMATED TAX/i.test(line))section='Tax & Contingency'; else if(/ESTIMATED GROSS/i.test(line))section='Gross Profit'; const nums=[...line.matchAll(/(?:Rp\s*)?(-?[\d][\d.,]*)\s*Rp?/gi)].map(m=>parseRpLoose(m[1])); if(nums.length>=2&&!/TOTAL BIAYA|GRAND TOTAL|SUMMARY|NO\.|JENIS PEKERJAAN|WORK DESCRIPTION/i.test(line)){const total=nums[nums.length-1],unitPrice=nums[nums.length-2];let desc=line.replace(/(?:Rp\s*)?-?[\d][\d.,]*\s*Rp?/gi,'').replace(/\s+/g,' ').trim();const qm=desc.match(/^(.*?)(?:\s)(\d+(?:[.,]\d+)?)\s+([A-Za-z²³]+)\s*$/);let qty=qm?parseFloat(qm[2].replace(',','.')):1,unit=qm?qm[3]:'unit';if(qm)desc=qm[1].trim();out.push({section,description:desc,qty,unit,unitPrice,total});}});} const seen=new Set(); return out.filter(r=>{const k=[r.section,r.description,r.total].join('|');if(seen.has(k))return false;seen.add(k);return true;}); }
 async function parseQuoteSpreadsheet(file){ const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),out=[]; wb.SheetNames.forEach(sn=>{XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''}).forEach(row=>{const cells=row.map(x=>String(x).trim()).filter(Boolean),joined=cells.join(' | ');let section='Revenue';if(/PROPOSED TO VENDOR|VENDOR|FEE/i.test(joined))section='Vendor Fee';else if(/ESTIMATED MATERIAL|MATERIAL/i.test(joined))section='Material';else if(/ESTIMATED TAX|CONTINGENCY/i.test(joined))section='Tax & Contingency';else if(/GROSS PROFIT/i.test(joined))section='Gross Profit';const nums=cells.map(parseRpLoose).filter(n=>n>0);if(cells.length>=2&&nums.length>=1&&!/TOTAL|SUMMARY|DESCRIPTION|JENIS PEKERJAAN|WORK DESCRIPTION|QTY|VOLUME|UNIT PRICE/i.test(joined)){const total=nums[nums.length-1],unitPrice=nums.length>=2?nums[nums.length-2]:total,desc=cells.find(c=>/[A-Za-zÀ-ÿ]/.test(c)&&!/^Rp/i.test(c)&&!/^\d/.test(c))||cells[0];out.push({section,description:desc,qty:1,unit:'unit',unitPrice,total});}});}); return out; }
 function openQuoteImportPreview(rows,fileName){ const clean=rows.slice(0,100); openModal({title:'Preview hasil baca quote',confirmLabel:`Import ${clean.length} item`,formHtml:`<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">File: ${escapeHtml(fileName)} — periksa hasil deteksi sebelum disimpan.</div><div style="max-height:420px;overflow:auto;border:1px solid var(--line);"><table><thead><tr><th>Bagian</th><th>Item</th><th>Qty</th><th>Unit</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>${clean.map((r,i)=>`<tr><td><select class="qi-prev-section" data-i="${i}"><option ${r.section==='Material'?'selected':''}>Material</option><option ${r.section==='Vendor Fee'?'selected':''}>Vendor Fee</option><option ${r.section==='Revenue'?'selected':''}>Revenue</option><option ${r.section==='Tax & Contingency'?'selected':''}>Tax & Contingency</option><option ${r.section==='Gross Profit'?'selected':''}>Gross Profit</option></select></td><td>${escapeHtml(r.description)}</td><td>${r.qty||1}</td><td>${escapeHtml(r.unit||'unit')}</td><td>${rupiah(r.unitPrice||0)}</td><td>${rupiah(r.total||0)}</td></tr>`).join('')}</tbody></table></div>`,onSubmit:async()=>{const payload=clean.map((r,i)=>({...r,section:document.querySelector(`.qi-prev-section[data-i="${i}"]`).value}));const inserts=payload.map(r=>({user_id:currentUser.id,project_id:activeProjectId,section:r.section,description:r.description,qty:r.qty||1,unit:r.unit||'unit',unit_price:r.unitPrice||0,total:r.total||0,source_file:fileName}));const {error}=await sb.from('project_quote_items').insert(inserts);if(error){console.error(error);showToast('Import gagal. Jalankan SQL migrasi dulu.');return false;}const rev=payload.filter(x=>x.section==='Revenue').reduce((a,x)=>a+x.total,0);if(rev>0)await sb.from('projects').update({quote_amount:rev}).eq('id',activeProjectId);await loadData();renderAll();showToast(`${inserts.length} item quote berhasil diimport.`);}}); }
 function quoteRealityRows(){
-  const proj=getActiveProject(); if(!proj) return null;
-  const items=quoteItemsForProject().filter(q=>q.section==='Material'||q.section==='Vendor Fee');
-  return {proj,items,tx:getProjectTransactions()};
+  const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee');
+  const txs=getProjectTransactions().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  return items.map((q,i)=>{
+    const actualRows=txs.filter(t=>t.quoteItemId===q.id);
+    const quote=Number(q.total||0), actual=actualRows.reduce((s,t)=>s+Number(t.amount||0),0);
+    return {no:i+1,description:q.description,section:q.section,quote,plan:quote,actual,remaining:quote-actual,variance:actual-quote,actualRows};
+  });
 }
 function exportQuoteRealityExcel(){
-  const data=quoteRealityRows(); if(!data){showToast('Pilih proyek dulu.');return;}
-  const {proj,items,tx}=data;
-  const rows=items.map((q,i)=>{
-    const actualTx=tx.filter(t=>t.quoteItemId===q.id);
-    const actual=actualTx.reduce((s,t)=>s+Number(t.amount||0),0);
-    const quote=Number(q.total||0);
-    return {No:i+1,Deskripsi:q.description,Bagian:q.section,Quote:quote,Plan:quote,Realita:actual,'Sisa Budget':quote-actual,Selisih:actual-quote,'% Realita':quote?actual/quote:0,Status:actual>quote?'RUGI / OVER BUDGET':actual>0?'TERKENDALI':'BELUM DIBELI',Nota:actualTx.map(t=>`${t.date} | ${t.vendor||'-'} | ${t.description||'-'} | ${t.ref||'-'} | ${t.amount||0} | ${t.note||''}`).join('\n')};
-  });
-  const quoteCost=items.reduce((s,q)=>s+Number(q.total||0),0);
-  const actualCost=rows.reduce((s,r)=>s+r.Realita,0);
+  const proj=getActiveProject(); if(!proj){showToast('Pilih proyek dulu.');return;}
+  const rows=quoteRealityRows();
   const revenue=Number(proj.quoteAmount||quoteBudgetTotals().revenue||0);
-  const gross=revenue-actualCost, tax=Math.max(gross,0)*0.04, net=gross-tax;
+  const actualCost=getProjectTransactions().reduce((s,t)=>s+Number(t.amount||0),0);
+  const gross=revenue-actualCost,tax=Math.max(gross,0)*0.04,net=gross-tax;
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Proyek:proj.name,Klien:proj.client,'Revenue Quote':revenue,'Quote Cost':quoteCost,'Plan Cost':quoteCost,'Realita Cost':actualCost,'Gross Profit Actual':gross,'Tax 4%':tax,'Net Profit After Tax':net,Status:gross<0?'RUGI':'UNTUNG'}]),'Summary');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{Info:'Belum ada item Material/Vendor Fee'}]),'Quote vs Realita');
-  const detail=tx.map(t=>{const q=items.find(x=>x.id===t.quoteItemId);return {No_Quote:q?items.indexOf(q)+1:'-',Item_Quote:q?.description||'Belum dikaitkan',Bagian:q?.section||'-',Tanggal:t.date,Vendor:t.vendor,Deskripsi_Nota:t.description,Jumlah:t.amount,No_Nota:t.ref,Status:t.status,Catatan:t.note};});
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detail.length?detail:[{Info:'Belum ada nota/biaya aktual'}]),'Detail Nota');
+  const summary=[
+    {Keterangan:'Proyek',Nilai:proj.name},{Keterangan:'Klien',Nilai:proj.client||'-'},
+    {Keterangan:'Quote / Revenue',Nilai:revenue},{Keterangan:'Actual Project Cost',Nilai:actualCost},
+    {Keterangan:'Gross Profit Actual',Nilai:gross},{Keterangan:'Tax 4%',Nilai:tax},{Keterangan:'Net Profit After Tax',Nilai:net}
+  ];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),'Summary');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.map(r=>({No:r.no,'Deskripsi Quote / Yang Harus Dibeli':r.description,Bagian:r.section,Quote:r.quote,Plan:r.plan,Realita:r.actual,'Sisa Budget':r.remaining,Selisih:r.variance,'% Realita':r.plan? r.actual/r.plan:0}))),'Quote vs Realita');
+  const detail=[]; rows.forEach(r=>r.actualRows.forEach(t=>detail.push({No:r.no,'Item Quote':r.description,Tanggal:t.date,Deskripsi:t.description,Vendor:t.vendor||'-','No. Nota':t.ref||'-',Jumlah:t.amount,Catatan:t.note||'-'})));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detail.length?detail:[{Info:'Belum ada nota / pembelian'}]),'Detail Nota');
   XLSX.writeFile(wb,`quote-vs-realita-${proj.name.replace(/\s+/g,'-').toLowerCase()}.xlsx`);
   showToast('Excel Quote vs Realita berhasil diunduh.');
 }
 function exportQuoteRealityPdf(){
-  const data=quoteRealityRows(); if(!data){showToast('Pilih proyek dulu.');return;}
-  const {proj,items,tx}=data;
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
+  const proj=getActiveProject(); if(!proj){showToast('Pilih proyek dulu.');return;}
+  const rows=quoteRealityRows();
   const revenue=Number(proj.quoteAmount||quoteBudgetTotals().revenue||0);
-  const quoteCost=items.reduce((s,q)=>s+Number(q.total||0),0);
-  const rows=items.map((q,i)=>{
-    const actual=tx.filter(t=>t.quoteItemId===q.id).reduce((s,t)=>s+Number(t.amount||0),0);
-    return [i+1,q.description,q.section,rupiah(q.total),rupiah(q.total),rupiah(actual),rupiah(q.total-actual),rupiah(actual-q.total),actual>q.total?'OVER':actual>0?'TERKENDALI':'BELUM DIBELI'];
-  });
-  const actualCost=items.reduce((s,q)=>s+tx.filter(t=>t.quoteItemId===q.id).reduce((a,t)=>a+Number(t.amount||0),0),0);
-  const gross=revenue-actualCost, tax=Math.max(gross,0)*0.04, net=gross-tax;
-  doc.setFontSize(16); doc.text('Quote vs Realita & Profit Proyek',14,14);
-  doc.setFontSize(11); doc.text(`${proj.name}${proj.client?' — '+proj.client:''}`,14,21);
-  doc.setFontSize(8); doc.text(`Revenue Quote: ${rupiah(revenue)} | Quote/Plan Cost: ${rupiah(quoteCost)} | Realita Cost: ${rupiah(actualCost)} | Gross Profit: ${rupiah(gross)} | Tax 4%: ${rupiah(tax)} | Net Profit: ${rupiah(net)}`,14,27);
-  doc.autoTable({startY:32,head:[['No','Deskripsi Quote / Yang Harus Dibeli','Bagian','Quote','Plan','Realita','Sisa Budget','Selisih','Status']],body:rows,styles:{fontSize:7,cellPadding:1.4},headStyles:{fontSize:7}});
-  let y=(doc.lastAutoTable?.finalY||32)+8;
-  doc.setFontSize(11); doc.text('Detail Nota / Realita',14,y); y+=4;
-  const details=tx.map(t=>{const q=items.find(x=>x.id===t.quoteItemId);return [q?items.indexOf(q)+1:'-',q?.description||'Belum dikaitkan',t.date,t.vendor||'-',t.description||'-',rupiah(t.amount||0),t.ref||'-',t.note||'-'];});
-  doc.autoTable({startY:y,head:[['No','Item Quote','Tanggal','Vendor','Deskripsi Nota','Jumlah','No. Nota','Catatan']],body:details.length?details:[['-','Belum ada nota','','','','','','']],styles:{fontSize:6.5,cellPadding:1.3},headStyles:{fontSize:6.5}});
-  doc.save(`quote-vs-realita-${proj.name.replace(/\s+/g,'-').toLowerCase()}.pdf`);
-  showToast('PDF Quote vs Realita berhasil diunduh.');
+  const actualCost=getProjectTransactions().reduce((s,t)=>s+Number(t.amount||0),0);
+  const gross=revenue-actualCost,tax=Math.max(gross,0)*0.04,net=gross-tax;
+  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
+  const pageW=doc.internal.pageSize.getWidth();
+  doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text('QUOTE VS REALITA',14,15);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text(`Proyek: ${proj.name}`,14,21);if(proj.client)doc.text(`Klien: ${proj.client}`,14,26);
+  const body=rows.map(r=>[String(r.no),r.description,r.section,rupiah(r.quote),rupiah(r.plan),r.actualRows.length?r.actualRows.map(t=>`${formatDateShort(t.date)} — ${t.description} — ${rupiah(t.amount)}`).join('\n'):'Belum dibeli',rupiah(r.remaining),rupiah(r.variance)]);
+  const tq=rows.reduce((s,r)=>s+r.quote,0),ta=rows.reduce((s,r)=>s+r.actual,0),tr=tq-ta,tv=ta-tq;
+  body.push([{content:'TOTAL COST',colSpan:3,styles:{fontStyle:'bold'}},rupiah(tq),rupiah(tq),rupiah(ta),rupiah(tr),rupiah(tv)]);
+  doc.autoTable({startY:31,head:[['No.','Deskripsi Quote / Yang Harus Dibeli','Bagian','Quote','Plan','Realita / Nota','Sisa Budget','Selisih']],body,styles:{fontSize:7.5,cellPadding:2,valign:'top'},headStyles:{fillColor:[28,75,77]},columnStyles:{0:{cellWidth:9},1:{cellWidth:58},2:{cellWidth:28},3:{halign:'right',cellWidth:28},4:{halign:'right',cellWidth:28},5:{cellWidth:67},6:{halign:'right',cellWidth:28},7:{halign:'right',cellWidth:28}},margin:{left:10,right:10}});
+  let y=doc.lastAutoTable.finalY+8;if(y>185){doc.addPage();y=15;}
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('SUMMARY PROYEK',14,y);y+=6;
+  doc.autoTable({startY:y,theme:'grid',head:[['Quote / Revenue','Actual Cost','Gross Profit','Tax 4%','Net Profit After Tax']],body:[[rupiah(revenue),rupiah(actualCost),rupiah(gross),rupiah(tax),rupiah(net)]],styles:{fontSize:8.5,cellPadding:3},headStyles:{fillColor:[28,75,77]},margin:{left:14,right:14}});
+  y=doc.lastAutoTable.finalY+8;
+  const detail=[];rows.forEach(r=>r.actualRows.forEach(t=>detail.push([String(r.no),r.description,formatDateShort(t.date),t.description,t.vendor||'-',t.ref||'-',rupiah(t.amount)])));
+  if(detail.length){doc.setFont('helvetica','bold');doc.text('RINCIAN REALITA / NOTA',14,y);doc.autoTable({startY:y+4,head:[['No.','Item Quote','Tanggal','Deskripsi Nota','Vendor','No. Nota','Jumlah']],body:detail,styles:{fontSize:7.5,cellPadding:2},headStyles:{fillColor:[28,75,77]},columnStyles:{6:{halign:'right'}},margin:{left:14,right:14}});}
+  openPdfSafely(doc,`quote-vs-realita-${proj.name.replace(/\s+/g,'-').toLowerCase()}.pdf`);
 }
+
 function exportMonthlyPlan(){ const proj=getActiveProject();if(!proj){showToast('Pilih proyek dulu.');return;} const month=document.getElementById('summary-month').value||new Date().toISOString().slice(0,7),plans=(state.purchasePlans||[]).filter(p=>p.projectId===activeProjectId&&p.date.slice(0,7)===month),actual=getProjectTransactions().filter(t=>t.date.slice(0,7)===month),items=quoteItemsForProject().filter(q=>q.section==='Material'||q.section==='Vendor Fee'),rows=items.map(q=>({Item:q.description,Bagian:q.section,Budget:q.total,Plan:plans.filter(p=>p.quoteItemId===q.id).reduce((a,p)=>a+p.amount,0),Actual:actual.filter(t=>t.quoteItemId===q.id).reduce((a,t)=>a+t.amount,0)})); const revenue=proj.quoteAmount||0,cost=actual.reduce((a,t)=>a+t.amount,0),gross=revenue-cost,tax=Math.max(gross,0)*0.04,net=gross-tax; const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Proyek:proj.name,Klien:proj.client,Periode:formatMonthLabel(month),'Revenue Quote':revenue,'Actual Cost':cost,'Gross Profit':gross,'Tax 4%':tax,'Net Profit':net}]),'Summary');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{Info:'Belum ada budget item'}]),'Plan vs Actual');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(plans.map(p=>{const q=quoteItemsForProject().find(x=>x.id===p.quoteItemId);return {Tanggal:p.date,Item:q?.description||'',Vendor:p.vendor,Plan:p.amount,Catatan:p.note}})),'Plan Bulanan');XLSX.writeFile(wb,`rekapan-proyek-${proj.name.replace(/\s+/g,'-').toLowerCase()}-${month}.xlsx`);showToast('Rekapan bulanan berhasil diunduh.'); }
 
 // ===================== PROJECTS =====================
@@ -1661,17 +1595,14 @@ async function handleSaveTransaction(){
   const vendor = document.getElementById('f-vendor').value.trim();
   const amount = parseFloat(document.getElementById('f-amount').value);
   const description = document.getElementById('f-desc').value.trim();
-  const quoteItemId=document.getElementById('f-quote-item').value || null;
-  const hasQuoteItems=quoteItemsForProject().some(q=>q.section==='Material'||q.section==='Vendor Fee');
   if(!vendor || !description || !amount || amount<=0){ showToast('Lengkapi vendor, deskripsi, dan jumlah dulu ya.'); return; }
-  if(hasQuoteItems && !quoteItemId){ showToast('Pilih dulu item Quote yang dibeli supaya Realita masuk ke nomor yang benar.'); return; }
   const row = {
     project_id: activeProjectId, user_id: currentUser.id, date,
     category: document.getElementById('f-category').value, vendor, amount, description,
     status: document.getElementById('f-status').value,
     ref: document.getElementById('f-noref').value.trim(),
     note: document.getElementById('f-note').value.trim(),
-    quote_item_id: quoteItemId
+    quote_item_id: document.getElementById('f-quote-item').value || null
   };
   let error;
   if(editingTxId){ ({error} = await sb.from('transactions').update(row).eq('id', editingTxId)); }
@@ -2134,7 +2065,7 @@ function startEditMaintenance(m){
   document.getElementById('mnt-vendor-payment').value=m.vendorStatus;
   document.getElementById('mnt-note').value=m.note||'';
   document.getElementById('cancelMaintenanceEditBtn').style.display='inline-block';
-  activatePanel('general'); updateMaintenanceCalc();
+  activatePanel('maintenance'); updateMaintenanceCalc();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -2563,65 +2494,68 @@ async function startApp(){
 }
 
 async function initAuth(){
-  const msg=document.getElementById('authMsg');
-  const loginBtn=document.getElementById('passwordLoginBtn');
-  const signupBtn=document.getElementById('passwordSignupBtn');
-  const emailEl=document.getElementById('auth-email');
-  const passEl=document.getElementById('auth-password');
-  // Pasang event listener SEBELUM getSession agar login tidak pernah "mati" karena startup app lain.
-  loginBtn.onclick=async()=>{
-    const email=emailEl.value.trim(), password=passEl.value;
-    if(!email||!password){msg.textContent='Masukkan email dan password dulu ya.';return;}
-    loginBtn.disabled=true; signupBtn.disabled=true; msg.textContent='Memproses login...';
-    try{
-      const {data,error}=await sb.auth.signInWithPassword({email,password});
-      if(error){console.error(error);msg.textContent='Login gagal: '+(error.message||'email atau password salah.');return;}
-      currentUser=data.user; msg.textContent='Login berhasil.'; await startApp();
-    }catch(e){console.error(e);msg.textContent='Login gagal: '+(e.message||'Terjadi error.');}
-    finally{loginBtn.disabled=false;signupBtn.disabled=false;}
-  };
-  signupBtn.onclick=async()=>{
-    const email=emailEl.value.trim(), password=passEl.value;
-    if(!email||!password){msg.textContent='Masukkan email dan password dulu ya.';return;}
-    if(password.length<6){msg.textContent='Password minimal 6 karakter.';return;}
-    loginBtn.disabled=true; signupBtn.disabled=true; msg.textContent='Membuat akun...';
-    try{
-      const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:window.location.href}});
-      if(error){console.error(error);msg.textContent='Gagal membuat akun: '+(error.message||'coba lagi.');return;}
-      if(data.session&&data.user){currentUser=data.user;msg.textContent='Akun berhasil dibuat.';await startApp();}
-      else msg.textContent='Akun dibuat. Jika Supabase meminta konfirmasi email, konfirmasi email tersebut dulu.';
-    }catch(e){console.error(e);msg.textContent='Gagal membuat akun: '+(e.message||'Terjadi error.');}
-    finally{loginBtn.disabled=false;signupBtn.disabled=false;}
-  };
-  passEl.addEventListener('keydown',e=>{if(e.key==='Enter')loginBtn.click();});
-  document.getElementById('logoutBtn').onclick=async()=>{await sb.auth.signOut();};
-  sb.auth.onAuthStateChange(async(event,session)=>{
-    if(session&&session.user){currentUser=session.user; if(event!=='INITIAL_SESSION') await startApp();}
-    else if(event==='SIGNED_OUT'){
-      currentUser=null;
-      state={projects:[],transactions:[],expenses:[],projectPayments:[],maintenance:[],pettyCash:[],inventoryItems:[],inventoryMovements:[],quoteItems:[],purchasePlans:[]};
-      activeProjectId=null; document.getElementById('appRoot').style.display='none'; document.getElementById('authGate').style.display='flex';
+  const { data: { session } } = await sb.auth.getSession();
+  if(session && session.user){ currentUser = session.user; await startApp(); }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if(session && session.user){ currentUser = session.user; await startApp(); }
+    else if(event === 'SIGNED_OUT'){
+      currentUser = null;
+      state = { projects:[], transactions:[], expenses:[], projectPayments:[], pettyCash:[], inventoryItems:[], inventoryMovements:[] };
+      activeProjectId = null;
+      document.getElementById('appRoot').style.display = 'none';
+      document.getElementById('authGate').style.display = 'flex';
     }
   });
-  try{
-    const {data,error}=await sb.auth.getSession();
-    if(error) throw error;
-    if(data.session&&data.session.user){currentUser=data.session.user;await startApp();}
-    else document.getElementById('authGate').style.display='flex';
-  }catch(e){console.error('Auth session error:',e);msg.textContent='Tidak bisa memeriksa sesi login: '+(e.message||'silakan refresh.');}
-}
 
-function updateInventoryUnitCost(){
-  const qty=Number(document.getElementById('mv-qty')?.value)||0;
-  const total=Number(document.getElementById('mv-cost')?.value)||0;
-  const el=document.getElementById('mv-unit-cost'); if(el) el.value=(qty>0&&total>0)?Math.round(total/qty):'';
+  document.getElementById('passwordLoginBtn').addEventListener('click', async ()=>{
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const msg = document.getElementById('authMsg');
+    if(!email || !password){ msg.textContent = 'Masukkan email dan password dulu ya.'; return; }
+    msg.textContent = 'Memproses login...';
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){
+      console.error(error);
+      msg.textContent = 'Login gagal: ' + (error.message || 'email atau password salah.');
+      return;
+    }
+    currentUser = data.user;
+    msg.textContent = 'Login berhasil.';
+    await startApp();
+  });
+
+  document.getElementById('passwordSignupBtn').addEventListener('click', async ()=>{
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const msg = document.getElementById('authMsg');
+    if(!email || !password){ msg.textContent = 'Masukkan email dan password dulu ya.'; return; }
+    if(password.length < 6){ msg.textContent = 'Password minimal 6 karakter.'; return; }
+    msg.textContent = 'Membuat akun...';
+    const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: window.location.href } });
+    if(error){
+      console.error(error);
+      msg.textContent = 'Gagal membuat akun: ' + (error.message || 'coba lagi.');
+      return;
+    }
+    if(data.session && data.user){
+      currentUser = data.user;
+      msg.textContent = 'Akun berhasil dibuat.';
+      await startApp();
+    } else {
+      msg.textContent = 'Akun dibuat. Jika Supabase meminta konfirmasi email, selesaikan konfirmasi tersebut dulu.';
+    }
+  });
+
+  document.getElementById('auth-password').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') document.getElementById('passwordLoginBtn').click();
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); });
 }
 
 function setupAppEvents(){
   setupTabs();
-  document.getElementById('general-month').addEventListener('change', renderGeneralDashboard);
-  document.getElementById('generalClearMonthBtn').addEventListener('click',()=>{document.getElementById('general-month').value='';renderGeneralDashboard();});
-  document.getElementById('exportGeneralMonthlyBtn').addEventListener('click', exportGeneralMonthly);
   document.getElementById('addProjectBtn').addEventListener('click', openAddProjectModal);
 
   // transaksi
@@ -2687,10 +2621,6 @@ function setupAppEvents(){
   document.getElementById('exportQuoteRealityExcelBtn').addEventListener('click', exportQuoteRealityExcel);
   document.getElementById('exportQuoteRealityPdfBtn').addEventListener('click', exportQuoteRealityPdf);
   document.getElementById('plan-date').value = todayISO();
-  document.getElementById('plan-item').addEventListener('change', ()=>{
-    const q=quoteItemsForProject().find(x=>x.id===document.getElementById('plan-item').value);
-    document.getElementById('plan-amount').value=q?Number(q.total||0):'';
-  });
 
   // inventory
   document.getElementById('addInventoryItemBtn').addEventListener('click', handleAddInventoryItem);
@@ -2721,7 +2651,7 @@ initAuth().catch(err => {
 // Modul aplikasi lain tidak boleh memblokir auth.
 try {
   setupAppEvents();
-  activatePanel('general');
+  activatePanel('maintenance');
 } catch(err) {
   console.error('App setup error:', err);
 }
