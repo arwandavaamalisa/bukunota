@@ -326,6 +326,9 @@
   .section-pill{display:inline-block;padding:3px 7px;border:1px solid var(--line);font-size:10px;font-weight:600}
   .upload-preview{background:#faf8f2;border:1px dashed var(--line);padding:12px;margin-top:10px;font-size:12px}
   .kpi-note{font-size:11px;color:var(--muted);margin-top:4px}
+  .actual-detail{font-size:11px;line-height:1.45;color:var(--muted);margin-top:5px;padding-left:10px;border-left:2px solid var(--line)}
+  .actual-detail strong{color:var(--ink)}
+  .status-ok{color:var(--ok);font-weight:700}.status-over{color:var(--warn);font-weight:700}.status-pending{color:var(--sand);font-weight:700}
 </style>
 </head>
 <body>
@@ -378,7 +381,7 @@
       </div>
       <div class="stamp">
         <div id="todayDate"></div>
-        <div>Buku Nota v3 — One File</div>
+        <div>Buku Nota v4 — Quote vs Realita</div>
       </div>
     </div>
 
@@ -455,8 +458,8 @@
                 </select>
               </div>
               <div>
-                <label for="f-quote-item">Budget dari Quote (opsional)</label>
-                <select id="f-quote-item"><option value="">— Tidak dikaitkan —</option></select>
+                <label for="f-quote-item">Item Quote yang dibeli <span style="color:var(--warn);">*</span></label>
+                <select id="f-quote-item"><option value="">— Pilih item quote yang dibeli —</option></select><div class="kpi-note">Wajib dipilih bila proyek sudah punya Quote, supaya nota masuk ke nomor item yang benar.</div>
               </div>
               <div>
                 <label for="f-vendor">Vendor / Toko</label>
@@ -693,14 +696,14 @@
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
               <div>
                 <h2 style="margin:0 0 4px;">Plan Belanja Bulanan</h2>
-                <p class="hint" style="margin:0;">Tentukan kapan item quote akan dibeli dan berapa rencana belanjanya. Nanti otomatis dibandingkan dengan aktual.</p>
+                <p class="hint" style="margin:0;">Tentukan kapan item quote akan dibeli. Nilai Plan otomatis sama dengan nilai Quote; nanti Realita diambil dari nota yang kamu masukkan.</p>
               </div>
               <button class="btn secondary small" id="exportMonthlyPlanBtn">⬇ Download Rekapan Bulanan</button>
             </div>
             <div class="form-grid" style="margin-top:14px;">
               <div><label for="plan-date">Tanggal rencana</label><input type="date" id="plan-date"></div>
               <div><label for="plan-item">Item Quote</label><select id="plan-item"><option value="">Pilih item quote</option></select></div>
-              <div><label for="plan-amount">Rencana belanja (Rp)</label><input type="number" id="plan-amount" min="0" placeholder="0"></div>
+              <div><label for="plan-amount">Plan / Budget (Rp)</label><input type="number" id="plan-amount" min="0" placeholder="otomatis dari Quote" readonly><div class="kpi-note">Nilainya otomatis sama dengan Quote item.</div></div>
               <div><label for="plan-vendor">Vendor rencana (opsional)</label><input type="text" id="plan-vendor" placeholder="Toko / supplier"></div>
               <div class="full"><label for="plan-note">Catatan</label><input type="text" id="plan-note" placeholder="mis. beli minggu pertama bulan depan"></div>
             </div>
@@ -715,8 +718,17 @@
           </div>
 
           <div class="card">
-            <h2>Quote vs Realita & Profit Proyek</h2>
-            <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div>
+                <h2 style="margin:0 0 4px;">Quote vs Realita & Profit Proyek</h2>
+                <p class="hint" style="margin:0;">Plan otomatis sama dengan nilai Quote. Setiap nota aktual dikaitkan ke item quote supaya terlihat apa yang harus dibeli, apa yang sudah dibeli, harga realita, dan apakah masih sesuai budget.</p>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn secondary small" id="exportQuoteRealityExcelBtn">⬇ Excel Quote vs Realita</button>
+                <button class="btn small" id="exportQuoteRealityPdfBtn">⬇ PDF Quote vs Realita</button>
+              </div>
+            </div>
+            <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);margin-top:16px;">
               <div class="stat"><div class="label">Actual Project Cost</div><div class="value warn" id="profit-actual-cost">Rp 0</div></div>
               <div class="stat"><div class="label">Gross Profit Actual</div><div class="value ok" id="profit-gross">Rp 0</div></div>
               <div class="stat"><div class="label">Tax 4%</div><div class="value warn" id="profit-tax">Rp 0</div></div>
@@ -724,11 +736,12 @@
             </div>
             <div style="overflow-x:auto;margin-top:10px;">
               <table>
-                <thead><tr><th>Deskripsi</th><th>Bagian</th><th class="amount">Quote</th><th class="amount">Plan</th><th class="amount">Realita</th><th class="amount">Selisih</th><th class="amount">% Realita</th><th>Status</th></tr></thead>
+                <thead><tr><th>No.</th><th>Deskripsi Quote / Yang Harus Dibeli</th><th>Bagian</th><th class="amount">Quote</th><th class="amount">Plan</th><th>Realita / Nota</th><th class="amount">Sisa Budget</th><th class="amount">Selisih</th><th>Status</th></tr></thead>
                 <tbody id="planActualBody"></tbody>
               </table>
             </div>
             <div class="empty" id="planActualEmpty" style="display:none;">Belum ada budget item untuk dibandingkan.</div>
+            <div class="kpi-note" style="margin-top:10px;">💡 <strong>Cara pakai:</strong> lihat nomor item dari Quote → saat membeli, pilih item Quote tersebut di form transaksi → masukkan vendor, deskripsi nota, nomor nota, dan nominal aktual. Kolom Realita akan otomatis menampilkan pembeliannya.</div>
           </div>
 
           <div class="card">
@@ -1378,10 +1391,11 @@ function actualByQuoteItem(){ const map={}; getProjectTransactions().forEach(t=>
 function planByQuoteItem(){ const map={}; (state.purchasePlans||[]).filter(p=>p.projectId===activeProjectId).forEach(p=>{map[p.quoteItemId]=(map[p.quoteItemId]||0)+Number(p.amount||0);}); return map; }
 function renderQuoteItemSelects(){
   const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee');
-  const opts='<option value="">— Tidak dikaitkan —</option>'+items.map(x=>`<option value="${x.id}">${escapeHtml(x.description)} — ${rupiah(x.total)}</option>`).join('');
+  const opts='<option value="">— Pilih item quote yang dibeli —</option>'+items.map((x,i)=>`<option value="${x.id}">${i+1}. ${escapeHtml(x.description)} — ${rupiah(x.total)}</option>`).join('');
   const el=document.getElementById('f-quote-item'); if(el) el.innerHTML=opts;
-  const pl=document.getElementById('plan-item'); if(pl) pl.innerHTML='<option value="">Pilih item quote</option>'+items.map(x=>`<option value="${x.id}">${escapeHtml(x.description)} — ${rupiah(x.total)}</option>`).join('');
+  const pl=document.getElementById('plan-item'); if(pl) pl.innerHTML='<option value="">Pilih item quote</option>'+items.map((x,i)=>`<option value="${x.id}">${i+1}. ${escapeHtml(x.description)} — ${rupiah(x.total)}</option>`).join('');
 }
+
 function renderQuoteItems(){
   const body=document.getElementById('quoteItemsBody'); if(!body)return; body.innerHTML='';
   const items=quoteItemsForProject(); document.getElementById('quoteItemsEmpty').style.display=items.length?'none':'block';
@@ -1397,24 +1411,29 @@ function renderPurchasePlans(){
 function renderPlanActual(){
   const body=document.getElementById('planActualBody'); if(!body)return; body.innerHTML='';
   const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee');
-  const am=actualByQuoteItem(), pm=planByQuoteItem();
+  const am=actualByQuoteItem(), tx=getProjectTransactions();
   document.getElementById('planActualEmpty').style.display=items.length?'none':'block';
   let quoteCost=0, actualCost=0;
-  items.forEach(q=>{
-    const quote=Number(q.total||0), plan=Number(pm[q.id]||0), actual=Number(am[q.id]||0);
+  items.forEach((q,index)=>{
+    const quote=Number(q.total||0), plan=quote, actual=Number(am[q.id]||0);
     quoteCost+=quote; actualCost+=actual;
-    const variance=actual-quote, pct=quote>0?(actual/quote*100):0, over=variance>0;
+    const remaining=quote-actual, variance=actual-quote, pct=quote>0?(actual/quote*100):0;
+    const actualTx=tx.filter(t=>t.quoteItemId===q.id).sort((a,b)=>b.date.localeCompare(a.date));
+    let status='BELUM DIBELI', statusClass='status-pending';
+    if(actual>quote){status='RUGI / OVER BUDGET';statusClass='status-over';}
+    else if(actual>0){status='TERKENDALI';statusClass='status-ok';}
+    const detail=actualTx.length?actualTx.map(t=>`<div class="actual-detail"><strong>${formatDateShort(t.date)}</strong> — ${escapeHtml(t.description||'Pembelian')}<br>Vendor: ${escapeHtml(t.vendor||'-')} · Nota: ${escapeHtml(t.ref||'-')} · <strong>${rupiah(t.amount||0)}</strong>${t.note?`<br>Catatan: ${escapeHtml(t.note)}`:''}</div>`).join(''):'<div class="actual-detail">Belum ada nota/biaya aktual untuk item ini.</div>';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${escapeHtml(q.description)}</td><td>${escapeHtml(q.section)}</td><td class="amount">${rupiah(quote)}</td><td class="amount">${rupiah(plan)}</td><td class="amount">${rupiah(actual)}</td><td class="amount ${over?'budget-over':'budget-ok'}">${variance>0?'+':''}${rupiah(variance)}</td><td class="amount ${pct>100?'budget-over':'budget-ok'}">${pct.toFixed(1)}%</td><td><span class="${over?'budget-over':'budget-ok'}">${over?'RUGI / OVER':'UNTUNG / TERKENDALI'}</span></td>`;
+    tr.innerHTML=`<td>${index+1}</td><td><strong>${escapeHtml(q.description)}</strong></td><td>${escapeHtml(q.section)}</td><td class="amount">${rupiah(quote)}</td><td class="amount">${rupiah(plan)}</td><td class="amount"><strong>${rupiah(actual)}</strong>${detail}</td><td class="amount ${remaining<0?'budget-over':'budget-ok'}">${rupiah(remaining)}</td><td class="amount ${variance>0?'budget-over':'budget-ok'}">${variance>0?'+':''}${rupiah(variance)}<div style="font-size:11px;color:var(--muted);">${pct.toFixed(1)}%</div></td><td><span class="${statusClass}">${status}</span></td>`;
     body.appendChild(tr);
   });
   if(items.length){
     const tr=document.createElement('tr'); tr.style.fontWeight='700';
-    const diff=actualCost-quoteCost;
-    tr.innerHTML=`<td colspan="2">TOTAL COST</td><td class="amount">${rupiah(quoteCost)}</td><td class="amount">${rupiah(items.reduce((s,q)=>s+(pm[q.id]||0),0))}</td><td class="amount">${rupiah(actualCost)}</td><td class="amount ${diff>0?'budget-over':'budget-ok'}">${diff>0?'+':''}${rupiah(diff)}</td><td class="amount">${quoteCost>0?(actualCost/quoteCost*100).toFixed(1):'0.0'}%</td><td>${diff>0?'<span class="budget-over">OVER BUDGET</span>':'<span class="budget-ok">TERKENDALI</span>'}</td>`;
+    const diff=actualCost-quoteCost, remaining=quoteCost-actualCost;
+    tr.innerHTML=`<td colspan="3">TOTAL COST</td><td class="amount">${rupiah(quoteCost)}</td><td class="amount">${rupiah(quoteCost)}</td><td class="amount">${rupiah(actualCost)}</td><td class="amount ${remaining<0?'budget-over':'budget-ok'}">${rupiah(remaining)}</td><td class="amount ${diff>0?'budget-over':'budget-ok'}">${diff>0?'+':''}${rupiah(diff)}</td><td>${diff>0?'<span class="status-over">OVER BUDGET</span>':'<span class="status-ok">TERKENDALI</span>'}</td>`;
     body.appendChild(tr);
   }
-  const revenue=Number(getActiveProject()?.quoteAmount||0);
+  const revenue=Number(getActiveProject()?.quoteAmount||quoteBudgetTotals().revenue||0);
   const gross=revenue-actualCost, tax=Math.max(gross,0)*0.04, net=gross-tax;
   document.getElementById('profit-actual-cost').textContent=rupiah(actualCost);
   document.getElementById('profit-gross').textContent=rupiah(gross);
@@ -1423,6 +1442,7 @@ function renderPlanActual(){
   document.getElementById('profit-gross').className='value '+(gross<0?'warn':'ok');
   document.getElementById('profit-net').className='value '+(net<0?'warn':'ok');
 }
+
 function renderQuoteData(){ renderQuoteItemSelects(); renderQuoteItems(); renderPurchasePlans(); renderPlanActual(); }
 function openAddQuoteItemModal(){
   if(!activeProjectId){showToast('Pilih proyek dulu.');return;}
@@ -1430,11 +1450,61 @@ function openAddQuoteItemModal(){
 }
 function openConfirmDeleteQuoteItem(q){ openModal({title:'Hapus budget item?',body:`${escapeHtml(q.description)} — ${rupiah(q.total)}`,confirmLabel:'Hapus',onConfirm:async()=>{const {error}=await sb.from('project_quote_items').delete().eq('id',q.id);if(error){console.error(error);showToast('Gagal menghapus budget item.');return;}await loadData();renderAll();showToast('Budget item dihapus.');}}); }
 function openConfirmDeletePurchasePlan(p){ openModal({title:'Hapus plan belanja?',body:`${formatDateShort(p.date)} — ${rupiah(p.amount)}`,confirmLabel:'Hapus',onConfirm:async()=>{const {error}=await sb.from('project_purchase_plans').delete().eq('id',p.id);if(error){console.error(error);showToast('Gagal menghapus plan.');return;}await loadData();renderAll();showToast('Plan belanja dihapus.');}}); }
-async function handleSavePurchasePlan(){ if(!activeProjectId){showToast('Pilih proyek dulu.');return;} const date=document.getElementById('plan-date').value||todayISO(), quoteItemId=document.getElementById('plan-item').value, amount=Number(document.getElementById('plan-amount').value)||0; if(!quoteItemId||amount<=0){showToast('Pilih item quote dan isi jumlah plan.');return;} const {error}=await sb.from('project_purchase_plans').insert({user_id:currentUser.id,project_id:activeProjectId,quote_item_id:quoteItemId,date,amount,vendor:document.getElementById('plan-vendor').value.trim(),note:document.getElementById('plan-note').value.trim()}); if(error){console.error(error);showToast('Gagal menyimpan plan. Jalankan SQL migrasi dulu.');return;} document.getElementById('plan-amount').value='';document.getElementById('plan-vendor').value='';document.getElementById('plan-note').value='';await loadData();renderAll();showToast('Plan belanja disimpan.'); }
+async function handleSavePurchasePlan(){ if(!activeProjectId){showToast('Pilih proyek dulu.');return;} const date=document.getElementById('plan-date').value||todayISO(), quoteItemId=document.getElementById('plan-item').value, quoteItem=quoteItemsForProject().find(q=>q.id===quoteItemId), amount=Number(quoteItem?.total||0); if(!quoteItemId||amount<=0){showToast('Pilih item quote dan isi jumlah plan.');return;} const {error}=await sb.from('project_purchase_plans').insert({user_id:currentUser.id,project_id:activeProjectId,quote_item_id:quoteItemId,date,amount,vendor:document.getElementById('plan-vendor').value.trim(),note:document.getElementById('plan-note').value.trim()}); if(error){console.error(error);showToast('Gagal menyimpan plan. Jalankan SQL migrasi dulu.');return;} document.getElementById('plan-amount').value='';document.getElementById('plan-vendor').value='';document.getElementById('plan-note').value='';await loadData();renderAll();showToast('Plan belanja disimpan.'); }
 async function handleQuoteFileUpload(e){ const file=e.target.files?.[0]; e.target.value=''; if(!file||!activeProjectId)return; const status=document.getElementById('quoteImportStatus'); status.innerHTML='<div class="upload-preview">Membaca file…</div>'; try{ let rows=file.name.toLowerCase().endsWith('.pdf')?await parseQuotePdf(file):await parseQuoteSpreadsheet(file); rows=rows.filter(r=>r.description&&r.total>0); if(!rows.length){status.innerHTML='<div class="upload-preview">Belum bisa menemukan baris budget otomatis. Coba Excel/CSV atau tambah manual.</div>';return;} openQuoteImportPreview(rows,file.name); }catch(err){console.error(err);status.innerHTML='<div class="upload-preview">Gagal membaca file. Pastikan PDF bukan scan gambar dan format Excel punya baris item.</div>';}}
 async function parseQuotePdf(file){ const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise, out=[]; for(let pg=1;pg<=pdf.numPages;pg++){ const page=await pdf.getPage(pg), content=await page.getTextContent(), groups={}; content.items.forEach(it=>{const y=Math.round(it.transform[5]/2)*2;(groups[y] ||= []).push({x:it.transform[4],s:it.str});}); let section='Revenue'; Object.keys(groups).map(Number).sort((a,b)=>b-a).forEach(y=>{const line=groups[y].sort((a,b)=>a.x-b.x).map(x=>x.s).join(' ').replace(/\s+/g,' ').trim(); if(!line)return; if(/PROPOSED TO VENDOR/i.test(line))section='Vendor Fee'; else if(/ESTIMATED MATERIAL/i.test(line))section='Material'; else if(/ESTIMATED TAX/i.test(line))section='Tax & Contingency'; else if(/ESTIMATED GROSS/i.test(line))section='Gross Profit'; const nums=[...line.matchAll(/(?:Rp\s*)?(-?[\d][\d.,]*)\s*Rp?/gi)].map(m=>parseRpLoose(m[1])); if(nums.length>=2&&!/TOTAL BIAYA|GRAND TOTAL|SUMMARY|NO\.|JENIS PEKERJAAN|WORK DESCRIPTION/i.test(line)){const total=nums[nums.length-1],unitPrice=nums[nums.length-2];let desc=line.replace(/(?:Rp\s*)?-?[\d][\d.,]*\s*Rp?/gi,'').replace(/\s+/g,' ').trim();const qm=desc.match(/^(.*?)(?:\s)(\d+(?:[.,]\d+)?)\s+([A-Za-z²³]+)\s*$/);let qty=qm?parseFloat(qm[2].replace(',','.')):1,unit=qm?qm[3]:'unit';if(qm)desc=qm[1].trim();out.push({section,description:desc,qty,unit,unitPrice,total});}});} const seen=new Set(); return out.filter(r=>{const k=[r.section,r.description,r.total].join('|');if(seen.has(k))return false;seen.add(k);return true;}); }
 async function parseQuoteSpreadsheet(file){ const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),out=[]; wb.SheetNames.forEach(sn=>{XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''}).forEach(row=>{const cells=row.map(x=>String(x).trim()).filter(Boolean),joined=cells.join(' | ');let section='Revenue';if(/PROPOSED TO VENDOR|VENDOR|FEE/i.test(joined))section='Vendor Fee';else if(/ESTIMATED MATERIAL|MATERIAL/i.test(joined))section='Material';else if(/ESTIMATED TAX|CONTINGENCY/i.test(joined))section='Tax & Contingency';else if(/GROSS PROFIT/i.test(joined))section='Gross Profit';const nums=cells.map(parseRpLoose).filter(n=>n>0);if(cells.length>=2&&nums.length>=1&&!/TOTAL|SUMMARY|DESCRIPTION|JENIS PEKERJAAN|WORK DESCRIPTION|QTY|VOLUME|UNIT PRICE/i.test(joined)){const total=nums[nums.length-1],unitPrice=nums.length>=2?nums[nums.length-2]:total,desc=cells.find(c=>/[A-Za-zÀ-ÿ]/.test(c)&&!/^Rp/i.test(c)&&!/^\d/.test(c))||cells[0];out.push({section,description:desc,qty:1,unit:'unit',unitPrice,total});}});}); return out; }
 function openQuoteImportPreview(rows,fileName){ const clean=rows.slice(0,100); openModal({title:'Preview hasil baca quote',confirmLabel:`Import ${clean.length} item`,formHtml:`<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">File: ${escapeHtml(fileName)} — periksa hasil deteksi sebelum disimpan.</div><div style="max-height:420px;overflow:auto;border:1px solid var(--line);"><table><thead><tr><th>Bagian</th><th>Item</th><th>Qty</th><th>Unit</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>${clean.map((r,i)=>`<tr><td><select class="qi-prev-section" data-i="${i}"><option ${r.section==='Material'?'selected':''}>Material</option><option ${r.section==='Vendor Fee'?'selected':''}>Vendor Fee</option><option ${r.section==='Revenue'?'selected':''}>Revenue</option><option ${r.section==='Tax & Contingency'?'selected':''}>Tax & Contingency</option><option ${r.section==='Gross Profit'?'selected':''}>Gross Profit</option></select></td><td>${escapeHtml(r.description)}</td><td>${r.qty||1}</td><td>${escapeHtml(r.unit||'unit')}</td><td>${rupiah(r.unitPrice||0)}</td><td>${rupiah(r.total||0)}</td></tr>`).join('')}</tbody></table></div>`,onSubmit:async()=>{const payload=clean.map((r,i)=>({...r,section:document.querySelector(`.qi-prev-section[data-i="${i}"]`).value}));const inserts=payload.map(r=>({user_id:currentUser.id,project_id:activeProjectId,section:r.section,description:r.description,qty:r.qty||1,unit:r.unit||'unit',unit_price:r.unitPrice||0,total:r.total||0,source_file:fileName}));const {error}=await sb.from('project_quote_items').insert(inserts);if(error){console.error(error);showToast('Import gagal. Jalankan SQL migrasi dulu.');return false;}const rev=payload.filter(x=>x.section==='Revenue').reduce((a,x)=>a+x.total,0);if(rev>0)await sb.from('projects').update({quote_amount:rev}).eq('id',activeProjectId);await loadData();renderAll();showToast(`${inserts.length} item quote berhasil diimport.`);}}); }
+function quoteRealityRows(){
+  const proj=getActiveProject(); if(!proj) return null;
+  const items=quoteItemsForProject().filter(q=>q.section==='Material'||q.section==='Vendor Fee');
+  return {proj,items,tx:getProjectTransactions()};
+}
+function exportQuoteRealityExcel(){
+  const data=quoteRealityRows(); if(!data){showToast('Pilih proyek dulu.');return;}
+  const {proj,items,tx}=data;
+  const rows=items.map((q,i)=>{
+    const actualTx=tx.filter(t=>t.quoteItemId===q.id);
+    const actual=actualTx.reduce((s,t)=>s+Number(t.amount||0),0);
+    const quote=Number(q.total||0);
+    return {No:i+1,Deskripsi:q.description,Bagian:q.section,Quote:quote,Plan:quote,Realita:actual,'Sisa Budget':quote-actual,Selisih:actual-quote,'% Realita':quote?actual/quote:0,Status:actual>quote?'RUGI / OVER BUDGET':actual>0?'TERKENDALI':'BELUM DIBELI',Nota:actualTx.map(t=>`${t.date} | ${t.vendor||'-'} | ${t.description||'-'} | ${t.ref||'-'} | ${t.amount||0} | ${t.note||''}`).join('\n')};
+  });
+  const quoteCost=items.reduce((s,q)=>s+Number(q.total||0),0);
+  const actualCost=rows.reduce((s,r)=>s+r.Realita,0);
+  const revenue=Number(proj.quoteAmount||quoteBudgetTotals().revenue||0);
+  const gross=revenue-actualCost, tax=Math.max(gross,0)*0.04, net=gross-tax;
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Proyek:proj.name,Klien:proj.client,'Revenue Quote':revenue,'Quote Cost':quoteCost,'Plan Cost':quoteCost,'Realita Cost':actualCost,'Gross Profit Actual':gross,'Tax 4%':tax,'Net Profit After Tax':net,Status:gross<0?'RUGI':'UNTUNG'}]),'Summary');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{Info:'Belum ada item Material/Vendor Fee'}]),'Quote vs Realita');
+  const detail=tx.map(t=>{const q=items.find(x=>x.id===t.quoteItemId);return {No_Quote:q?items.indexOf(q)+1:'-',Item_Quote:q?.description||'Belum dikaitkan',Bagian:q?.section||'-',Tanggal:t.date,Vendor:t.vendor,Deskripsi_Nota:t.description,Jumlah:t.amount,No_Nota:t.ref,Status:t.status,Catatan:t.note};});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detail.length?detail:[{Info:'Belum ada nota/biaya aktual'}]),'Detail Nota');
+  XLSX.writeFile(wb,`quote-vs-realita-${proj.name.replace(/\s+/g,'-').toLowerCase()}.xlsx`);
+  showToast('Excel Quote vs Realita berhasil diunduh.');
+}
+function exportQuoteRealityPdf(){
+  const data=quoteRealityRows(); if(!data){showToast('Pilih proyek dulu.');return;}
+  const {proj,items,tx}=data;
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
+  const revenue=Number(proj.quoteAmount||quoteBudgetTotals().revenue||0);
+  const quoteCost=items.reduce((s,q)=>s+Number(q.total||0),0);
+  const rows=items.map((q,i)=>{
+    const actual=tx.filter(t=>t.quoteItemId===q.id).reduce((s,t)=>s+Number(t.amount||0),0);
+    return [i+1,q.description,q.section,rupiah(q.total),rupiah(q.total),rupiah(actual),rupiah(q.total-actual),rupiah(actual-q.total),actual>q.total?'OVER':actual>0?'TERKENDALI':'BELUM DIBELI'];
+  });
+  const actualCost=items.reduce((s,q)=>s+tx.filter(t=>t.quoteItemId===q.id).reduce((a,t)=>a+Number(t.amount||0),0),0);
+  const gross=revenue-actualCost, tax=Math.max(gross,0)*0.04, net=gross-tax;
+  doc.setFontSize(16); doc.text('Quote vs Realita & Profit Proyek',14,14);
+  doc.setFontSize(11); doc.text(`${proj.name}${proj.client?' — '+proj.client:''}`,14,21);
+  doc.setFontSize(8); doc.text(`Revenue Quote: ${rupiah(revenue)} | Quote/Plan Cost: ${rupiah(quoteCost)} | Realita Cost: ${rupiah(actualCost)} | Gross Profit: ${rupiah(gross)} | Tax 4%: ${rupiah(tax)} | Net Profit: ${rupiah(net)}`,14,27);
+  doc.autoTable({startY:32,head:[['No','Deskripsi Quote / Yang Harus Dibeli','Bagian','Quote','Plan','Realita','Sisa Budget','Selisih','Status']],body:rows,styles:{fontSize:7,cellPadding:1.4},headStyles:{fontSize:7}});
+  let y=(doc.lastAutoTable?.finalY||32)+8;
+  doc.setFontSize(11); doc.text('Detail Nota / Realita',14,y); y+=4;
+  const details=tx.map(t=>{const q=items.find(x=>x.id===t.quoteItemId);return [q?items.indexOf(q)+1:'-',q?.description||'Belum dikaitkan',t.date,t.vendor||'-',t.description||'-',rupiah(t.amount||0),t.ref||'-',t.note||'-'];});
+  doc.autoTable({startY:y,head:[['No','Item Quote','Tanggal','Vendor','Deskripsi Nota','Jumlah','No. Nota','Catatan']],body:details.length?details:[['-','Belum ada nota','','','','','','']],styles:{fontSize:6.5,cellPadding:1.3},headStyles:{fontSize:6.5}});
+  doc.save(`quote-vs-realita-${proj.name.replace(/\s+/g,'-').toLowerCase()}.pdf`);
+  showToast('PDF Quote vs Realita berhasil diunduh.');
+}
 function exportMonthlyPlan(){ const proj=getActiveProject();if(!proj){showToast('Pilih proyek dulu.');return;} const month=document.getElementById('summary-month').value||new Date().toISOString().slice(0,7),plans=(state.purchasePlans||[]).filter(p=>p.projectId===activeProjectId&&p.date.slice(0,7)===month),actual=getProjectTransactions().filter(t=>t.date.slice(0,7)===month),items=quoteItemsForProject().filter(q=>q.section==='Material'||q.section==='Vendor Fee'),rows=items.map(q=>({Item:q.description,Bagian:q.section,Budget:q.total,Plan:plans.filter(p=>p.quoteItemId===q.id).reduce((a,p)=>a+p.amount,0),Actual:actual.filter(t=>t.quoteItemId===q.id).reduce((a,t)=>a+t.amount,0)})); const revenue=proj.quoteAmount||0,cost=actual.reduce((a,t)=>a+t.amount,0),gross=revenue-cost,tax=Math.max(gross,0)*0.04,net=gross-tax; const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Proyek:proj.name,Klien:proj.client,Periode:formatMonthLabel(month),'Revenue Quote':revenue,'Actual Cost':cost,'Gross Profit':gross,'Tax 4%':tax,'Net Profit':net}]),'Summary');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{Info:'Belum ada budget item'}]),'Plan vs Actual');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(plans.map(p=>{const q=quoteItemsForProject().find(x=>x.id===p.quoteItemId);return {Tanggal:p.date,Item:q?.description||'',Vendor:p.vendor,Plan:p.amount,Catatan:p.note}})),'Plan Bulanan');XLSX.writeFile(wb,`rekapan-proyek-${proj.name.replace(/\s+/g,'-').toLowerCase()}-${month}.xlsx`);showToast('Rekapan bulanan berhasil diunduh.'); }
 
 // ===================== PROJECTS =====================
@@ -1591,14 +1661,17 @@ async function handleSaveTransaction(){
   const vendor = document.getElementById('f-vendor').value.trim();
   const amount = parseFloat(document.getElementById('f-amount').value);
   const description = document.getElementById('f-desc').value.trim();
+  const quoteItemId=document.getElementById('f-quote-item').value || null;
+  const hasQuoteItems=quoteItemsForProject().some(q=>q.section==='Material'||q.section==='Vendor Fee');
   if(!vendor || !description || !amount || amount<=0){ showToast('Lengkapi vendor, deskripsi, dan jumlah dulu ya.'); return; }
+  if(hasQuoteItems && !quoteItemId){ showToast('Pilih dulu item Quote yang dibeli supaya Realita masuk ke nomor yang benar.'); return; }
   const row = {
     project_id: activeProjectId, user_id: currentUser.id, date,
     category: document.getElementById('f-category').value, vendor, amount, description,
     status: document.getElementById('f-status').value,
     ref: document.getElementById('f-noref').value.trim(),
     note: document.getElementById('f-note').value.trim(),
-    quote_item_id: document.getElementById('f-quote-item').value || null
+    quote_item_id: quoteItemId
   };
   let error;
   if(editingTxId){ ({error} = await sb.from('transactions').update(row).eq('id', editingTxId)); }
@@ -2611,7 +2684,13 @@ function setupAppEvents(){
   document.getElementById('addQuoteItemBtn').addEventListener('click', openAddQuoteItemModal);
   document.getElementById('savePlanBtn').addEventListener('click', handleSavePurchasePlan);
   document.getElementById('exportMonthlyPlanBtn').addEventListener('click', exportMonthlyPlan);
+  document.getElementById('exportQuoteRealityExcelBtn').addEventListener('click', exportQuoteRealityExcel);
+  document.getElementById('exportQuoteRealityPdfBtn').addEventListener('click', exportQuoteRealityPdf);
   document.getElementById('plan-date').value = todayISO();
+  document.getElementById('plan-item').addEventListener('change', ()=>{
+    const q=quoteItemsForProject().find(x=>x.id===document.getElementById('plan-item').value);
+    document.getElementById('plan-amount').value=q?Number(q.total||0):'';
+  });
 
   // inventory
   document.getElementById('addInventoryItemBtn').addEventListener('click', handleAddInventoryItem);
