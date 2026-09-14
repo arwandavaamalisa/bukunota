@@ -2187,6 +2187,12 @@ function openConfirmDeleteItem(item){
   });
 }
 
+function updateInventoryUnitCost(){
+  const qty = parseFloat(document.getElementById('mv-qty').value) || 0;
+  const total = parseFloat(document.getElementById('mv-cost').value) || 0;
+  const unit = qty > 0 && total > 0 ? total / qty : 0;
+  document.getElementById('mv-unit-cost').value = unit ? Math.round(unit) : '';
+}
 function toggleMovementFields(){
   const type = document.getElementById('mv-type').value;
   document.getElementById('mv-project-wrap').style.display = type==='Pemakaian' ? 'block':'none';
