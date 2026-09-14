@@ -353,7 +353,9 @@
       <p class="brand-sub">Keuangan & transaksi proyek</p>
     </div>
     <div class="side-nav" id="sideNav">
-      <button class="side-nav-btn active" data-nav="ringkasan">📊 Dashboard Maintenance</button>
+      <button class="side-nav-btn active" data-nav="general">📊 Dashboard General</button>
+      <button class="side-nav-btn" data-nav="ringkasan">📁 Proyek & Profit</button>
+      <button class="side-nav-btn" data-nav="maintenance">🧰 Dashboard Maintenance</button>
       <button class="side-nav-btn" data-nav="pengeluaran">💸 Expenses General</button>
       <button class="side-nav-btn" data-nav="pettycash">💰 Petty Cash General</button>
       <button class="side-nav-btn" data-nav="inventory">📦 Inventory General</button>
@@ -389,8 +391,48 @@
     </div>
 
     <div id="tabContent">
+      <!-- DASHBOARD GENERAL -->
+      <div class="tab-panel active" data-panel="general">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div>
+              <h2 style="margin:0 0 4px;">Dashboard General — Profit Bulanan</h2>
+              <p class="hint" style="margin:0;">Ringkasan bulanan seluruh proyek. Profit General dihitung dari uang masuk proyek yang benar-benar tercatat dikurangi realita biaya proyek, lalu Tax 4% dari gross profit positif.</p>
+            </div>
+            <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+              <div><label for="general-month">Bulan</label><input type="month" id="general-month"></div>
+              <button class="btn secondary small" id="generalClearMonthBtn">Semua periode</button>
+              <button class="btn small" id="exportGeneralMonthlyBtn">⬇ Download Summary Bulanan</button>
+            </div>
+          </div>
+          <div class="summary-grid" style="margin-top:16px;">
+            <div class="stat"><div class="label">Uang Masuk Proyek (Actual)</div><div class="value" id="general-revenue">Rp 0</div></div>
+            <div class="stat"><div class="label">Realita Biaya Proyek</div><div class="value warn" id="general-cost">Rp 0</div></div>
+            <div class="stat"><div class="label">Gross Profit</div><div class="value ok" id="general-gross">Rp 0</div></div>
+            <div class="stat"><div class="label">Net Profit Setelah Tax 4%</div><div class="value ok" id="general-net">Rp 0</div></div>
+          </div>
+          <div class="summary-grid" style="grid-template-columns:repeat(3,1fr);">
+            <div class="stat"><div class="label">Total Tax 4%</div><div class="value warn" id="general-tax">Rp 0</div></div>
+            <div class="stat"><div class="label">Uang Masuk / Credit Bulan Ini</div><div class="value ok" id="general-paid">Rp 0</div></div>
+            <div class="stat"><div class="label">Proyek Aktif di Periode</div><div class="value" id="general-project-count">0</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Profit per Project — Quote vs Realita</h2>
+          <p class="hint">Ini yang akan menjadi sumber utama Summary General. Realita biaya diambil dari transaksi biaya proyek yang sudah dicatat.</p>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Project</th><th class="amount">Quote Revenue</th><th class="amount">Quote Cost</th><th class="amount">Realita Cost</th><th class="amount">Gross Profit</th><th class="amount">Tax 4%</th><th class="amount">Net Profit</th><th>Status</th></tr></thead>
+              <tbody id="generalProjectProfitBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="generalProjectProfitEmpty" style="display:none;">Belum ada data proyek pada periode ini.</div>
+        </div>
+      </div>
+
       <!-- TRANSAKSI -->
-      <div class="tab-panel active" data-panel="input">
+      <div class="tab-panel" data-panel="input">
         <div id="tx-noProjectMsg" class="card" style="display:none;">
           <p style="margin:0;color:var(--muted);">Tambahkan proyek dulu di sebelah kiri sebelum mulai mencatat transaksi.</p>
         </div>
@@ -673,7 +715,7 @@
           </div>
 
           <div class="card">
-            <h2>Plan vs Actual & Profit Proyek</h2>
+            <h2>Quote vs Realita & Profit Proyek</h2>
             <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);">
               <div class="stat"><div class="label">Actual Project Cost</div><div class="value warn" id="profit-actual-cost">Rp 0</div></div>
               <div class="stat"><div class="label">Gross Profit Actual</div><div class="value ok" id="profit-gross">Rp 0</div></div>
@@ -682,7 +724,7 @@
             </div>
             <div style="overflow-x:auto;margin-top:10px;">
               <table>
-                <thead><tr><th>Budget Item</th><th>Bagian</th><th class="amount">Budget</th><th class="amount">Plan</th><th class="amount">Actual</th><th class="amount">Sisa Budget</th><th class="amount">Variance</th><th>Status</th></tr></thead>
+                <thead><tr><th>Deskripsi</th><th>Bagian</th><th class="amount">Quote</th><th class="amount">Plan</th><th class="amount">Realita</th><th class="amount">Selisih</th><th class="amount">% Realita</th><th>Status</th></tr></thead>
                 <tbody id="planActualBody"></tbody>
               </table>
             </div>
@@ -1192,7 +1234,8 @@ function renderTitleBlock(){
       bits.push(`<span>Quote: <b>${rupiah(proj.quoteAmount||0)}</b></span>`);
       if(proj.location) bits.push(`<span>Lokasi: <b>${escapeHtml(proj.location)}</b></span>`);
     }
-  }else if(currentSection==='input') title=proj ? 'Biaya Proyek — '+proj.name : 'Biaya Proyek';
+  }else if(currentSection==='general') title='Dashboard General — Profit Bulanan';
+  else if(currentSection==='input') title=proj ? 'Biaya Proyek — '+proj.name : 'Biaya Proyek';
   else if(currentSection==='maintenance') title='Maintenance Dashboard';
   else if(currentSection==='pengeluaran') title='Expenses General';
   else if(currentSection==='pettycash') title='Petty Cash General';
@@ -1201,6 +1244,7 @@ function renderTitleBlock(){
   document.getElementById('activeProjectMeta').innerHTML = bits.join('');
   const hasProj = !!proj;
   document.getElementById('tx-noProjectMsg').style.display = currentSection==='input' && !hasProj ? 'block':'none';
+  const generalPanel=document.querySelector('.tab-panel[data-panel="general"]'); if(generalPanel) generalPanel.style.display=currentSection==='general'?'block':'';
   document.getElementById('tx-content').style.display = currentSection==='input' && hasProj ? 'block':'none';
   document.getElementById('ex-noProjectMsg').style.display = 'none';
   document.getElementById('ex-content').style.display = currentSection==='pengeluaran' ? 'block':'none';
@@ -1218,11 +1262,68 @@ function renderAll(){
   renderTxTable();
   renderExpTable();
   renderSummary();
+  renderGeneralDashboard();
   renderPettyCash();
   renderInventoryAll();
   renderQuoteData();
   renderMaintenance();
   renderTitleBlock();
+}
+
+// ===================== GENERAL MONTHLY PROFIT =====================
+function getGeneralMonth(){ return document.getElementById('general-month')?.value || ''; }
+function getProjectMonthData(project, month){
+  const tx=state.transactions.filter(t=>t.projectId===project.id && t.vendor!=='__PAYMENT__' && t.vendor!=='__QUOTE__' && t.vendor!=='__MAINTENANCE__' && (!month || t.date.slice(0,7)===month));
+  const payments=state.projectPayments.filter(p=>p.projectId===project.id && (!month || p.date.slice(0,7)===month));
+  const quoteItems=(state.quoteItems||[]).filter(q=>q.projectId===project.id);
+  const quoteCost=quoteItems.filter(q=>q.section==='Material'||q.section==='Vendor Fee'||q.section==='Tax & Contingency').reduce((s,q)=>s+Number(q.total||0),0);
+  const revenue=Number(project.quoteAmount||0);
+  const actualCost=tx.reduce((s,t)=>s+Number(t.amount||0),0);
+  const paid=payments.reduce((s,p)=>s+Number(p.amount||0),0);
+  const gross=revenue-actualCost;
+  const tax=Math.max(gross,0)*0.04;
+  const net=gross-tax;
+  return {tx,payments,quoteCost,revenue,actualCost,paid,gross,tax,net};
+}
+function renderGeneralDashboard(){
+  const body=document.getElementById('generalProjectProfitBody'); if(!body)return;
+  const month=getGeneralMonth(); body.innerHTML='';
+  const rows=state.projects.map(p=>({p,d:getProjectMonthData(p,month)})).filter(x=>{
+    if(!month)return true;
+    return x.d.tx.length||x.d.payments.length||x.p.createdAt?.slice(0,7)===month;
+  });
+  document.getElementById('generalProjectProfitEmpty').style.display=rows.length?'none':'block';
+  let revenue=0,cost=0,gross=0,tax=0,net=0,paid=0;
+  rows.forEach(({p,d})=>{
+    revenue+=d.paid; cost+=d.actualCost; gross+=d.paid-d.actualCost; tax+=Math.max(d.paid-d.actualCost,0)*0.04; net+=(d.paid-d.actualCost)-Math.max(d.paid-d.actualCost,0)*0.04; paid+=d.paid;
+    const status=d.gross<0?'RUGI':(d.actualCost>d.quoteCost&&d.quoteCost>0?'OVER BUDGET':'UNTUNG');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><strong>${escapeHtml(p.name)}</strong><div style="font-size:11px;color:var(--muted)">${escapeHtml(p.client||'')}</div></td><td class="amount">${rupiah(d.revenue)}</td><td class="amount">${rupiah(d.quoteCost)}</td><td class="amount">${rupiah(d.actualCost)}</td><td class="amount ${d.gross<0?'budget-over':'budget-ok'}">${rupiah(d.gross)}</td><td class="amount">${rupiah(d.tax)}</td><td class="amount ${d.net<0?'budget-over':'budget-ok'}">${rupiah(d.net)}</td><td><span class="${d.gross<0||status==='OVER BUDGET'?'budget-over':'budget-ok'}">${status}</span></td>`;
+    tr.addEventListener('click',()=>{activeProjectId=p.id;activatePanel('ringkasan');renderAll();});
+    tr.style.cursor='pointer'; body.appendChild(tr);
+  });
+  document.getElementById('general-revenue').textContent=rupiah(revenue);
+  document.getElementById('general-cost').textContent=rupiah(cost);
+  document.getElementById('general-gross').textContent=rupiah(gross);
+  document.getElementById('general-tax').textContent=rupiah(tax);
+  document.getElementById('general-net').textContent=rupiah(net);
+  document.getElementById('general-paid').textContent=rupiah(paid);
+  document.getElementById('general-project-count').textContent=String(rows.length);
+  document.getElementById('general-gross').className='value '+(gross<0?'warn':'ok');
+  document.getElementById('general-net').className='value '+(net<0?'warn':'ok');
+}
+function exportGeneralMonthly(){
+  const month=getGeneralMonth()||new Date().toISOString().slice(0,7);
+  const rows=state.projects.map(p=>({p,d:getProjectMonthData(p,month)})).filter(x=>x.d.tx.length||x.d.payments.length||x.p.createdAt?.slice(0,7)===month);
+  if(!rows.length){showToast('Belum ada data proyek pada periode ini.');return;}
+  const summary=rows.map(({p,d})=>({Project:p.name,Klien:p.client,Periode:formatMonthLabel(month),'Uang Masuk Proyek':d.paid,'Quote Revenue Reference':d.revenue,'Quote Cost':d.quoteCost,'Realita Cost':d.actualCost,'Variance Cost':d.actualCost-d.quoteCost,'Gross Profit Bulanan':d.paid-d.actualCost,'Tax 4%':Math.max(d.paid-d.actualCost,0)*0.04,'Net Profit Bulanan':(d.paid-d.actualCost)-Math.max(d.paid-d.actualCost,0)*0.04,Status:d.gross<0?'RUGI':(d.actualCost>d.quoteCost&&d.quoteCost>0?'OVER BUDGET':'UNTUNG')}));
+  const detail=[];
+  rows.forEach(({p,d})=>d.tx.forEach(t=>detail.push({Project:p.name,Tanggal:t.date,Kategori:t.category,Vendor:t.vendor,Deskripsi:t.description,'Realita Cost':t.amount,'Budget Item':quoteItemsForProject().find(q=>q.id===t.quoteItemId)?.description||'',Status:t.status})));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),'Summary Project');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detail.length?detail:[{Info:'Tidak ada transaksi biaya pada periode ini'}]),'Realita Biaya');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Periode:formatMonthLabel(month),'Total Uang Masuk Proyek':summary.reduce((s,r)=>s+r['Uang Masuk Proyek'],0),'Total Realita Cost':summary.reduce((s,r)=>s+r['Realita Cost'],0),'Gross Profit Bulanan':summary.reduce((s,r)=>s+r['Gross Profit Bulanan'],0),'Tax 4%':summary.reduce((s,r)=>s+r['Tax 4%'],0),'Net Profit Bulanan':summary.reduce((s,r)=>s+r['Net Profit Bulanan'],0)}]),'Total Bulanan');
+  XLSX.writeFile(wb,`summary-general-${month}.xlsx`); showToast('Summary general bulanan berhasil diunduh.');
 }
 
 // ===================== MODAL HELPER =====================
@@ -1295,10 +1396,32 @@ function renderPurchasePlans(){
 }
 function renderPlanActual(){
   const body=document.getElementById('planActualBody'); if(!body)return; body.innerHTML='';
-  const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee'), am=actualByQuoteItem(), pm=planByQuoteItem(); document.getElementById('planActualEmpty').style.display=items.length?'none':'block';
-  items.forEach(q=>{ const budget=q.total||0, plan=pm[q.id]||0, actual=am[q.id]||0, remaining=budget-actual, variance=actual-budget, over=variance>0; const tr=document.createElement('tr'); tr.innerHTML=`<td>${escapeHtml(q.description)}</td><td>${escapeHtml(q.section)}</td><td class="amount">${rupiah(budget)}</td><td class="amount">${rupiah(plan)}</td><td class="amount">${rupiah(actual)}</td><td class="amount ${remaining<0?'budget-over':'budget-ok'}">${rupiah(remaining)}</td><td class="amount ${over?'budget-over':'budget-ok'}">${over?'+':''}${rupiah(variance)}</td><td><span class="${over?'budget-over':'budget-ok'}">${over?'OVER BUDGET':(actual>0?'TERKENDALI':'BELUM BELI')}</span></td>`; body.appendChild(tr); });
-  const revenue=Number(getActiveProject()?.quoteAmount||0), actualCost=getProjectTransactions().reduce((s,t)=>s+t.amount,0), gross=revenue-actualCost, tax=Math.max(gross,0)*0.04, net=gross-tax;
-  document.getElementById('profit-actual-cost').textContent=rupiah(actualCost); document.getElementById('profit-gross').textContent=rupiah(gross); document.getElementById('profit-tax').textContent=rupiah(tax); document.getElementById('profit-net').textContent=rupiah(net); document.getElementById('profit-gross').className='value '+(gross<0?'warn':'ok'); document.getElementById('profit-net').className='value '+(net<0?'warn':'ok');
+  const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee');
+  const am=actualByQuoteItem(), pm=planByQuoteItem();
+  document.getElementById('planActualEmpty').style.display=items.length?'none':'block';
+  let quoteCost=0, actualCost=0;
+  items.forEach(q=>{
+    const quote=Number(q.total||0), plan=Number(pm[q.id]||0), actual=Number(am[q.id]||0);
+    quoteCost+=quote; actualCost+=actual;
+    const variance=actual-quote, pct=quote>0?(actual/quote*100):0, over=variance>0;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${escapeHtml(q.description)}</td><td>${escapeHtml(q.section)}</td><td class="amount">${rupiah(quote)}</td><td class="amount">${rupiah(plan)}</td><td class="amount">${rupiah(actual)}</td><td class="amount ${over?'budget-over':'budget-ok'}">${variance>0?'+':''}${rupiah(variance)}</td><td class="amount ${pct>100?'budget-over':'budget-ok'}">${pct.toFixed(1)}%</td><td><span class="${over?'budget-over':'budget-ok'}">${over?'RUGI / OVER':'UNTUNG / TERKENDALI'}</span></td>`;
+    body.appendChild(tr);
+  });
+  if(items.length){
+    const tr=document.createElement('tr'); tr.style.fontWeight='700';
+    const diff=actualCost-quoteCost;
+    tr.innerHTML=`<td colspan="2">TOTAL COST</td><td class="amount">${rupiah(quoteCost)}</td><td class="amount">${rupiah(items.reduce((s,q)=>s+(pm[q.id]||0),0))}</td><td class="amount">${rupiah(actualCost)}</td><td class="amount ${diff>0?'budget-over':'budget-ok'}">${diff>0?'+':''}${rupiah(diff)}</td><td class="amount">${quoteCost>0?(actualCost/quoteCost*100).toFixed(1):'0.0'}%</td><td>${diff>0?'<span class="budget-over">OVER BUDGET</span>':'<span class="budget-ok">TERKENDALI</span>'}</td>`;
+    body.appendChild(tr);
+  }
+  const revenue=Number(getActiveProject()?.quoteAmount||0);
+  const gross=revenue-actualCost, tax=Math.max(gross,0)*0.04, net=gross-tax;
+  document.getElementById('profit-actual-cost').textContent=rupiah(actualCost);
+  document.getElementById('profit-gross').textContent=rupiah(gross);
+  document.getElementById('profit-tax').textContent=rupiah(tax);
+  document.getElementById('profit-net').textContent=rupiah(net);
+  document.getElementById('profit-gross').className='value '+(gross<0?'warn':'ok');
+  document.getElementById('profit-net').className='value '+(net<0?'warn':'ok');
 }
 function renderQuoteData(){ renderQuoteItemSelects(); renderQuoteItems(); renderPurchasePlans(); renderPlanActual(); }
 function openAddQuoteItemModal(){
@@ -1938,7 +2061,7 @@ function startEditMaintenance(m){
   document.getElementById('mnt-vendor-payment').value=m.vendorStatus;
   document.getElementById('mnt-note').value=m.note||'';
   document.getElementById('cancelMaintenanceEditBtn').style.display='inline-block';
-  activatePanel('maintenance'); updateMaintenanceCalc();
+  activatePanel('general'); updateMaintenanceCalc();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -2367,68 +2490,65 @@ async function startApp(){
 }
 
 async function initAuth(){
-  const { data: { session } } = await sb.auth.getSession();
-  if(session && session.user){ currentUser = session.user; await startApp(); }
-
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if(session && session.user){ currentUser = session.user; await startApp(); }
-    else if(event === 'SIGNED_OUT'){
-      currentUser = null;
-      state = { projects:[], transactions:[], expenses:[], projectPayments:[], pettyCash:[], inventoryItems:[], inventoryMovements:[] };
-      activeProjectId = null;
-      document.getElementById('appRoot').style.display = 'none';
-      document.getElementById('authGate').style.display = 'flex';
+  const msg=document.getElementById('authMsg');
+  const loginBtn=document.getElementById('passwordLoginBtn');
+  const signupBtn=document.getElementById('passwordSignupBtn');
+  const emailEl=document.getElementById('auth-email');
+  const passEl=document.getElementById('auth-password');
+  // Pasang event listener SEBELUM getSession agar login tidak pernah "mati" karena startup app lain.
+  loginBtn.onclick=async()=>{
+    const email=emailEl.value.trim(), password=passEl.value;
+    if(!email||!password){msg.textContent='Masukkan email dan password dulu ya.';return;}
+    loginBtn.disabled=true; signupBtn.disabled=true; msg.textContent='Memproses login...';
+    try{
+      const {data,error}=await sb.auth.signInWithPassword({email,password});
+      if(error){console.error(error);msg.textContent='Login gagal: '+(error.message||'email atau password salah.');return;}
+      currentUser=data.user; msg.textContent='Login berhasil.'; await startApp();
+    }catch(e){console.error(e);msg.textContent='Login gagal: '+(e.message||'Terjadi error.');}
+    finally{loginBtn.disabled=false;signupBtn.disabled=false;}
+  };
+  signupBtn.onclick=async()=>{
+    const email=emailEl.value.trim(), password=passEl.value;
+    if(!email||!password){msg.textContent='Masukkan email dan password dulu ya.';return;}
+    if(password.length<6){msg.textContent='Password minimal 6 karakter.';return;}
+    loginBtn.disabled=true; signupBtn.disabled=true; msg.textContent='Membuat akun...';
+    try{
+      const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:window.location.href}});
+      if(error){console.error(error);msg.textContent='Gagal membuat akun: '+(error.message||'coba lagi.');return;}
+      if(data.session&&data.user){currentUser=data.user;msg.textContent='Akun berhasil dibuat.';await startApp();}
+      else msg.textContent='Akun dibuat. Jika Supabase meminta konfirmasi email, konfirmasi email tersebut dulu.';
+    }catch(e){console.error(e);msg.textContent='Gagal membuat akun: '+(e.message||'Terjadi error.');}
+    finally{loginBtn.disabled=false;signupBtn.disabled=false;}
+  };
+  passEl.addEventListener('keydown',e=>{if(e.key==='Enter')loginBtn.click();});
+  document.getElementById('logoutBtn').onclick=async()=>{await sb.auth.signOut();};
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(session&&session.user){currentUser=session.user; if(event!=='INITIAL_SESSION') await startApp();}
+    else if(event==='SIGNED_OUT'){
+      currentUser=null;
+      state={projects:[],transactions:[],expenses:[],projectPayments:[],maintenance:[],pettyCash:[],inventoryItems:[],inventoryMovements:[],quoteItems:[],purchasePlans:[]};
+      activeProjectId=null; document.getElementById('appRoot').style.display='none'; document.getElementById('authGate').style.display='flex';
     }
   });
+  try{
+    const {data,error}=await sb.auth.getSession();
+    if(error) throw error;
+    if(data.session&&data.session.user){currentUser=data.session.user;await startApp();}
+    else document.getElementById('authGate').style.display='flex';
+  }catch(e){console.error('Auth session error:',e);msg.textContent='Tidak bisa memeriksa sesi login: '+(e.message||'silakan refresh.');}
+}
 
-  document.getElementById('passwordLoginBtn').addEventListener('click', async ()=>{
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
-    const msg = document.getElementById('authMsg');
-    if(!email || !password){ msg.textContent = 'Masukkan email dan password dulu ya.'; return; }
-    msg.textContent = 'Memproses login...';
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if(error){
-      console.error(error);
-      msg.textContent = 'Login gagal: ' + (error.message || 'email atau password salah.');
-      return;
-    }
-    currentUser = data.user;
-    msg.textContent = 'Login berhasil.';
-    await startApp();
-  });
-
-  document.getElementById('passwordSignupBtn').addEventListener('click', async ()=>{
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
-    const msg = document.getElementById('authMsg');
-    if(!email || !password){ msg.textContent = 'Masukkan email dan password dulu ya.'; return; }
-    if(password.length < 6){ msg.textContent = 'Password minimal 6 karakter.'; return; }
-    msg.textContent = 'Membuat akun...';
-    const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: window.location.href } });
-    if(error){
-      console.error(error);
-      msg.textContent = 'Gagal membuat akun: ' + (error.message || 'coba lagi.');
-      return;
-    }
-    if(data.session && data.user){
-      currentUser = data.user;
-      msg.textContent = 'Akun berhasil dibuat.';
-      await startApp();
-    } else {
-      msg.textContent = 'Akun dibuat. Jika Supabase meminta konfirmasi email, selesaikan konfirmasi tersebut dulu.';
-    }
-  });
-
-  document.getElementById('auth-password').addEventListener('keydown', (e)=>{
-    if(e.key === 'Enter') document.getElementById('passwordLoginBtn').click();
-  });
-
-  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); });
+function updateInventoryUnitCost(){
+  const qty=Number(document.getElementById('mv-qty')?.value)||0;
+  const total=Number(document.getElementById('mv-cost')?.value)||0;
+  const el=document.getElementById('mv-unit-cost'); if(el) el.value=(qty>0&&total>0)?Math.round(total/qty):'';
 }
 
 function setupAppEvents(){
   setupTabs();
+  document.getElementById('general-month').addEventListener('change', renderGeneralDashboard);
+  document.getElementById('generalClearMonthBtn').addEventListener('click',()=>{document.getElementById('general-month').value='';renderGeneralDashboard();});
+  document.getElementById('exportGeneralMonthlyBtn').addEventListener('click', exportGeneralMonthly);
   document.getElementById('addProjectBtn').addEventListener('click', openAddProjectModal);
 
   // transaksi
@@ -2522,7 +2642,7 @@ initAuth().catch(err => {
 // Modul aplikasi lain tidak boleh memblokir auth.
 try {
   setupAppEvents();
-  activatePanel('maintenance');
+  activatePanel('general');
 } catch(err) {
   console.error('App setup error:', err);
 }
