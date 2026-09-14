@@ -2493,65 +2493,114 @@ async function startApp(){
   renderAll();
 }
 
+function bindAuthEvents(){
+  const loginBtn = document.getElementById('passwordLoginBtn');
+  const signupBtn = document.getElementById('passwordSignupBtn');
+  const passwordInput = document.getElementById('auth-password');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const msg = document.getElementById('authMsg');
+
+  if(loginBtn && !loginBtn.dataset.bound){
+    loginBtn.dataset.bound = '1';
+    loginBtn.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      const email = document.getElementById('auth-email').value.trim();
+      const password = passwordInput.value;
+      if(!email || !password){ msg.textContent = 'Masukkan email dan password dulu ya.'; return; }
+      loginBtn.disabled = true;
+      signupBtn.disabled = true;
+      msg.textContent = 'Memproses login...';
+      try{
+        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+        if(error) throw error;
+        currentUser = data.user;
+        msg.textContent = 'Login berhasil. Membuka Buku Nota...';
+        await startApp();
+      }catch(error){
+        console.error('LOGIN ERROR:', error);
+        msg.textContent = 'Login gagal: ' + (error.message || 'email atau password salah.');
+      }finally{
+        loginBtn.disabled = false;
+        signupBtn.disabled = false;
+      }
+    });
+  }
+
+  if(signupBtn && !signupBtn.dataset.bound){
+    signupBtn.dataset.bound = '1';
+    signupBtn.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      const email = document.getElementById('auth-email').value.trim();
+      const password = passwordInput.value;
+      if(!email || !password){ msg.textContent = 'Masukkan email dan password dulu ya.'; return; }
+      if(password.length < 6){ msg.textContent = 'Password minimal 6 karakter.'; return; }
+      loginBtn.disabled = true;
+      signupBtn.disabled = true;
+      msg.textContent = 'Membuat akun...';
+      try{
+        const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: window.location.href } });
+        if(error) throw error;
+        if(data.session && data.user){
+          currentUser = data.user;
+          msg.textContent = 'Akun berhasil dibuat. Membuka Buku Nota...';
+          await startApp();
+        }else{
+          msg.textContent = 'Akun berhasil dibuat. Cek email untuk konfirmasi sebelum login.';
+        }
+      }catch(error){
+        console.error('SIGNUP ERROR:', error);
+        msg.textContent = 'Gagal membuat akun: ' + (error.message || 'coba lagi.');
+      }finally{
+        loginBtn.disabled = false;
+        signupBtn.disabled = false;
+      }
+    });
+  }
+
+  if(passwordInput && !passwordInput.dataset.bound){
+    passwordInput.dataset.bound = '1';
+    passwordInput.addEventListener('keydown', e=>{
+      if(e.key === 'Enter') loginBtn.click();
+    });
+  }
+
+  if(logoutBtn && !logoutBtn.dataset.bound){
+    logoutBtn.dataset.bound = '1';
+    logoutBtn.addEventListener('click', async ()=>{ await sb.auth.signOut(); });
+  }
+}
+
 async function initAuth(){
-  const { data: { session } } = await sb.auth.getSession();
-  if(session && session.user){ currentUser = session.user; await startApp(); }
+  // Pasang listener tombol SECARA SINKRON sebelum menunggu Supabase.
+  bindAuthEvents();
+
+  try{
+    const { data, error } = await sb.auth.getSession();
+    if(error) console.error('GET SESSION ERROR:', error);
+    const session = data && data.session;
+    if(session && session.user){
+      currentUser = session.user;
+      await startApp();
+    }
+  }catch(error){
+    console.error('AUTH SESSION ERROR:', error);
+    const msg = document.getElementById('authMsg');
+    if(msg) msg.textContent = 'Supabase belum bisa membaca sesi. Kamu tetap bisa mencoba Login lagi.';
+  }
 
   sb.auth.onAuthStateChange(async (event, session) => {
-    if(session && session.user){ currentUser = session.user; await startApp(); }
-    else if(event === 'SIGNED_OUT'){
+    if(session && session.user){
+      currentUser = session.user;
+      // Login handler sudah membuka app; event auth cukup memastikan state user.
+      if(document.getElementById('appRoot').style.display === 'none') await startApp();
+    } else if(event === 'SIGNED_OUT'){
       currentUser = null;
-      state = { projects:[], transactions:[], expenses:[], projectPayments:[], pettyCash:[], inventoryItems:[], inventoryMovements:[] };
+      state = { projects:[], transactions:[], expenses:[], projectPayments:[], maintenance:[], pettyCash:[], inventoryItems:[], inventoryMovements:[], quoteItems:[], purchasePlans:[] };
       activeProjectId = null;
       document.getElementById('appRoot').style.display = 'none';
       document.getElementById('authGate').style.display = 'flex';
     }
   });
-
-  document.getElementById('passwordLoginBtn').addEventListener('click', async ()=>{
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
-    const msg = document.getElementById('authMsg');
-    if(!email || !password){ msg.textContent = 'Masukkan email dan password dulu ya.'; return; }
-    msg.textContent = 'Memproses login...';
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if(error){
-      console.error(error);
-      msg.textContent = 'Login gagal: ' + (error.message || 'email atau password salah.');
-      return;
-    }
-    currentUser = data.user;
-    msg.textContent = 'Login berhasil.';
-    await startApp();
-  });
-
-  document.getElementById('passwordSignupBtn').addEventListener('click', async ()=>{
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
-    const msg = document.getElementById('authMsg');
-    if(!email || !password){ msg.textContent = 'Masukkan email dan password dulu ya.'; return; }
-    if(password.length < 6){ msg.textContent = 'Password minimal 6 karakter.'; return; }
-    msg.textContent = 'Membuat akun...';
-    const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: window.location.href } });
-    if(error){
-      console.error(error);
-      msg.textContent = 'Gagal membuat akun: ' + (error.message || 'coba lagi.');
-      return;
-    }
-    if(data.session && data.user){
-      currentUser = data.user;
-      msg.textContent = 'Akun berhasil dibuat.';
-      await startApp();
-    } else {
-      msg.textContent = 'Akun dibuat. Jika Supabase meminta konfirmasi email, selesaikan konfirmasi tersebut dulu.';
-    }
-  });
-
-  document.getElementById('auth-password').addEventListener('keydown', (e)=>{
-    if(e.key === 'Enter') document.getElementById('passwordLoginBtn').click();
-  });
-
-  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); });
 }
 
 function setupAppEvents(){
@@ -2618,15 +2667,15 @@ function setupAppEvents(){
   document.getElementById('addQuoteItemBtn').addEventListener('click', openAddQuoteItemModal);
   document.getElementById('savePlanBtn').addEventListener('click', handleSavePurchasePlan);
   document.getElementById('exportMonthlyPlanBtn').addEventListener('click', exportMonthlyPlan);
-  document.getElementById('exportQuoteRealityExcelBtn').addEventListener('click', exportQuoteRealityExcel);
-  document.getElementById('exportQuoteRealityPdfBtn').addEventListener('click', exportQuoteRealityPdf);
+  document.getElementById('exportQuoteRealityExcelBtn')?.addEventListener('click', exportQuoteRealityExcel);
+  document.getElementById('exportQuoteRealityPdfBtn')?.addEventListener('click', exportQuoteRealityPdf);
   document.getElementById('plan-date').value = todayISO();
 
   // inventory
   document.getElementById('addInventoryItemBtn').addEventListener('click', handleAddInventoryItem);
   document.getElementById('mv-type').addEventListener('change', toggleMovementFields);
-  document.getElementById('mv-qty').addEventListener('input', updateInventoryUnitCost);
-  document.getElementById('mv-cost').addEventListener('input', updateInventoryUnitCost);
+  document.getElementById('mv-qty').addEventListener('input', ()=>{ if(typeof updateInventoryUnitCost==='function') updateInventoryUnitCost(); });
+  document.getElementById('mv-cost').addEventListener('input', ()=>{ if(typeof updateInventoryUnitCost==='function') updateInventoryUnitCost(); });
   document.getElementById('saveMovementBtn').addEventListener('click', handleSaveMovement);
   document.getElementById('mvfilter-item').addEventListener('change', renderInventoryMovementTable);
   document.getElementById('mvfilter-type').addEventListener('change', renderInventoryMovementTable);
