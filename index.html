@@ -2914,11 +2914,13 @@ function setupAppEvents(){
 
 // AUTH HARUS DIPASANG TERLEBIH DAHULU.
 // Jika ada error di modul aplikasi lain, tombol Login/Buat akun tetap berfungsi.
-initAuth().catch(err => {
+try {
+  initAuth();
+} catch(err) {
   console.error('Auth initialization error:', err);
   const msg = document.getElementById('authMsg');
   if(msg) msg.textContent = 'Terjadi error saat menyiapkan login. Silakan refresh halaman.';
-});
+}
 
 // Modul aplikasi lain tidak boleh memblokir auth.
 try {
