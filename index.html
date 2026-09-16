@@ -728,12 +728,13 @@
                     <th rowspan="2">Deskripsi Quote / Yang Harus Dibeli</th>
                     <th rowspan="2">Bagian</th>
                     <th colspan="2" style="text-align:center;">QUOTE / PLAN</th>
-                    <th colspan="3" style="text-align:center;">AKTUAL / REALISASI</th>
+                    <th colspan="4" style="text-align:center;">AKTUAL / REALISASI</th>
                   </tr>
                   <tr>
                     <th class="amount">Quote</th>
                     <th class="amount">Plan</th>
-                    <th class="amount">Realisasi / Nota</th>
+                    <th class="amount">Aktual</th>
+                    <th>Keterangan Realisasi</th>
                     <th class="amount">Sisa Budget</th>
                     <th class="amount">Selisih</th>
                   </tr>
@@ -1372,21 +1373,24 @@ function renderPlanActual(){
     // negative = still under quote, zero = exact, positive = over.
     const varianceClass=variance>0?'budget-negative':(variance===0?'budget-zero':'budget-positive');
 
-    const actualHtml=actualList.length
+    const actualAmountHtml=actualList.length
+      ? `<div class="actual-list actual-numbers">${actualList.map(t=>`<div class="actual-entry"><strong>${rupiah(t.amount)}</strong></div>`).join('')}</div><div style="margin-top:6px;font-weight:800;">Total: ${rupiah(actual)}</div>`
+      : `<span style="color:var(--muted);">Rp 0</span>`;
+    const actualNoteHtml=actualList.length
       ? `<div class="actual-list">${actualList.map(t=>{
-          const qDesc=(t.description||'Tanpa deskripsi');
           const vendor=t.vendor||'-';
           const ref=t.ref||'-';
           const note=t.note||'';
           return `<div class="actual-entry">
-            <strong>${formatDateShort(t.date)} — ${rupiah(t.amount)}</strong>
-            <small>${escapeHtml(qDesc)}</small>
+            <strong>${formatDateShort(t.date)} — ${escapeHtml(t.description||'Realisasi')}</strong>
+            <small>Untuk quote: ${escapeHtml(q.description)}</small>
             <small>Vendor/Toko: ${escapeHtml(vendor)}</small>
+            <small>Keterangan: ${escapeHtml(t.description||'-')}</small>
             <small>No. Nota/Ref: ${escapeHtml(ref)}</small>
             ${note?`<small>Catatan: ${escapeHtml(note)}</small>`:''}
           </div>`;
         }).join('')}</div>`
-      : `<span style="color:var(--muted);">Belum ada nota / realisasi</span>`;
+      : `<span style="color:var(--muted);">Belum ada keterangan</span>`;
 
     const tr=document.createElement('tr');
     tr.innerHTML=`
@@ -1395,7 +1399,8 @@ function renderPlanActual(){
       <td>${escapeHtml(q.section)}</td>
       <td class="amount">${rupiah(budget)}</td>
       <td class="amount">${rupiah(plan)}</td>
-      <td class="amount">${actualHtml}<div style="margin-top:6px;font-weight:800;">Total: ${rupiah(actual)}</div></td>
+      <td class="amount">${actualAmountHtml}</td>
+      <td>${actualNoteHtml}</td>
       <td class="amount ${remainingClass}">${rupiah(remaining)}</td>
       <td class="amount ${varianceClass}">${variance>0?'+':''}${rupiah(variance)}</td>
     `;
@@ -1415,6 +1420,7 @@ function renderPlanActual(){
     <td class="amount"><strong>${rupiah(totalQuote)}</strong></td>
     <td class="amount"><strong>${rupiah(totalQuote)}</strong></td>
     <td class="amount"><strong>${rupiah(totalActual)}</strong></td>
+    <td><strong>Seluruh realisasi pada item quote terkait</strong></td>
     <td class="amount ${totalRemainingClass}"><strong>${rupiah(totalRemaining)}</strong></td>
     <td class="amount ${totalVarianceClass}"><strong>${totalVariance>0?'+':''}${rupiah(totalVariance)}</strong></td>
   `;
@@ -1484,212 +1490,146 @@ function reportFileBase(){
   return `quote-vs-aktual-${(proj?.name||'proyek').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase()}`;
 }
 
+function downloadBlobFile(blob, filename){
+  try{
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=filename; a.style.display='none';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    return true;
+  }catch(e){ console.error(e); return false; }
+}
+
 function exportQuoteActualPdf(){
-  const data=quoteActualReportData();
-  if(!data){showToast('Pilih proyek dulu.');return;}
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
-  const pageW=doc.internal.pageSize.getWidth();
+  try{
+    const data=quoteActualReportData();
+    if(!data){showToast('Pilih proyek dulu.');return;}
+    if(!window.jspdf || !window.jspdf.jsPDF) throw new Error('Library PDF belum termuat.');
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
+    const pageW=doc.internal.pageSize.getWidth();
+    doc.setFont('helvetica','bold'); doc.setFontSize(15);
+    doc.text('QUOTE VS AKTUAL / REALISASI',14,14);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text(`Proyek: ${data.proj.name||'-'}`,14,21);
+    doc.text(`Klien: ${data.proj.client||'-'}`,14,26);
+    doc.text(`Dibuat: ${new Date().toLocaleString('id-ID')}`,pageW-14,14,{align:'right'});
 
-  doc.setFont('helvetica','bold'); doc.setFontSize(15);
-  doc.text('QUOTE VS AKTUAL / REALISASI',14,14);
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  doc.text(`Proyek: ${data.proj.name||'-'}`,14,21);
-  if(data.proj.client) doc.text(`Klien: ${data.proj.client}`,14,26);
-  doc.text(`Dibuat: ${new Date().toLocaleString('id-ID')}`,pageW-14,14,{align:'right'});
+    const body=data.rows.map(r=>{
+      const actualAmount=r.actuals.length ? r.actuals.map(t=>rupiah(t.amount)).join('\n')+`\nTOTAL: ${rupiah(r.actual)}` : 'Rp 0';
+      const notes=r.actuals.length ? r.actuals.map(t=>[
+        formatDateShort(t.date),
+        `Untuk quote: ${r.description}`,
+        `Vendor/Toko: ${t.vendor||'-'}`,
+        `Keterangan: ${t.description||'-'}`,
+        `No. Nota/Ref: ${t.ref||'-'}`,
+        t.note?`Catatan: ${t.note}`:''
+      ].filter(Boolean).join('\n')).join('\n\n') : 'Belum ada realisasi';
+      return [r.no,r.description,r.section,rupiah(r.quote),rupiah(r.plan),actualAmount,notes,rupiah(r.remaining),`${r.variance>0?'+':''}${rupiah(r.variance)}`];
+    });
+    body.push(['','TOTAL','',rupiah(data.totalQuote),rupiah(data.totalQuote),rupiah(data.totalActual),'Seluruh realisasi pada item quote terkait',rupiah(data.totalRemaining),`${data.totalVariance>0?'+':''}${rupiah(data.totalVariance)}`]);
 
-  const body=data.rows.map(r=>{
-    const actualDetails=r.actuals.length
-      ? r.actuals.map(t=>`${formatDateShort(t.date)} | ${t.vendor||'-'} | ${t.description||'-'} | ${rupiah(t.amount)}${t.ref?` | ${t.ref}`:''}`).join('\n')
-      : 'Belum ada nota / realisasi';
-    return [
-      r.no,
-      r.description,
-      r.section,
-      rupiah(r.quote),
-      rupiah(r.plan),
-      actualDetails+`\nTOTAL AKTUAL: ${rupiah(r.actual)}`,
-      rupiah(r.remaining),
-      `${r.variance>0?'+':''}${rupiah(r.variance)}`
-    ];
-  });
-
-  body.push([
-    '', 'TOTAL', '',
-    rupiah(data.totalQuote), rupiah(data.totalQuote),
-    `TOTAL AKTUAL: ${rupiah(data.totalActual)}`,
-    rupiah(data.totalRemaining),
-    `${data.totalVariance>0?'+':''}${rupiah(data.totalVariance)}`
-  ]);
-
-  doc.autoTable({
-    startY:32,
-    head:[
-      [
-        {content:'No.',rowSpan:2},
-        {content:'Deskripsi Quote / Yang Harus Dibeli',rowSpan:2},
-        {content:'Bagian',rowSpan:2},
-        {content:'QUOTE / PLAN',colSpan:2,styles:{halign:'center'}},
-        {content:'AKTUAL / REALISASI',colSpan:3,styles:{halign:'center'}}
+    if(typeof doc.autoTable!=='function') throw new Error('Plugin tabel PDF belum termuat.');
+    doc.autoTable({
+      startY:32,
+      head:[
+        [
+          {content:'No.',rowSpan:2},
+          {content:'Deskripsi Quote / Yang Harus Dibeli',rowSpan:2},
+          {content:'Bagian',rowSpan:2},
+          {content:'QUOTE / PLAN',colSpan:2,styles:{halign:'center'}},
+          {content:'AKTUAL / REALISASI',colSpan:4,styles:{halign:'center'}}
+        ],
+        ['Quote','Plan','Aktual','Keterangan Realisasi','Sisa Budget','Selisih']
       ],
-      ['Quote','Plan','Realisasi / Nota','Sisa Budget','Selisih']
-    ],
-    body,
-    styles:{fontSize:7.2,cellPadding:2,overflow:'linebreak',valign:'top'},
-    headStyles:{fillColor:[28,75,77],textColor:255,fontStyle:'bold'},
-    columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:56},2:{cellWidth:27},3:{cellWidth:31,halign:'right'},4:{cellWidth:31,halign:'right'},5:{cellWidth:70},6:{cellWidth:31,halign:'right'},7:{cellWidth:31,halign:'right'}},
-    didParseCell:function(hook){
-      if(hook.section==='body' && hook.row.index===body.length-1){
-        hook.cell.styles.fontStyle='bold';
-        hook.cell.styles.fillColor=[232,238,238];
-      }
-      if(hook.section==='body' && (hook.column.index===6 || hook.column.index===7) && hook.row.index<body.length-1){
-        const val=data.rows[hook.row.index]?.[hook.column.index===6?'remaining':'variance'];
-        if(val<0) hook.cell.styles.fillColor=[255,216,216];
-        else if(val===0) hook.cell.styles.fillColor=[216,243,220];
-        else hook.cell.styles.fillColor=[255,243,191];
-      }
-    },
-    margin:{left:10,right:10}
-  });
+      body,
+      styles:{fontSize:6.5,cellPadding:1.8,overflow:'linebreak',valign:'top'},
+      headStyles:{fillColor:[28,75,77],textColor:255,fontStyle:'bold'},
+      columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:48},2:{cellWidth:24},3:{cellWidth:27,halign:'right'},4:{cellWidth:27,halign:'right'},5:{cellWidth:25,halign:'right'},6:{cellWidth:72},7:{cellWidth:27,halign:'right'},8:{cellWidth:27,halign:'right'}},
+      didParseCell:function(hook){
+        if(hook.section==='body' && hook.row.index===body.length-1){hook.cell.styles.fontStyle='bold';hook.cell.styles.fillColor=[232,238,238];}
+        if(hook.section==='body' && (hook.column.index===7||hook.column.index===8) && hook.row.index<body.length-1){
+          const r=data.rows[hook.row.index];
+          const val=hook.column.index===7?r.remaining:r.variance;
+          if(val<0) hook.cell.styles.fillColor=[255,216,216];
+          else if(val===0) hook.cell.styles.fillColor=[216,243,220];
+          else hook.cell.styles.fillColor=[255,243,191];
+        }
+      }, margin:{left:10,right:10}
+    });
 
-  let y=doc.lastAutoTable.finalY+9;
-  if(y>175){doc.addPage();y=16;}
-  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('Ringkasan Profit Proyek',14,y);
-  y+=6;
-  doc.autoTable({
-    startY:y,
-    theme:'grid',
-    head:[['Nilai Quote / Revenue','Actual Project Cost','Gross Profit Actual','Tax 4%','Net Profit After Tax']],
-    body:[[rupiah(data.revenue),rupiah(data.projectActualCost),rupiah(data.gross),rupiah(data.tax),rupiah(data.net)]],
-    styles:{fontSize:9,cellPadding:3,halign:'right'},
-    headStyles:{fillColor:[28,75,77],textColor:255},
-    margin:{left:10,right:10}
-  });
-
-  openPdfSafely(doc,`${reportFileBase()}.pdf`);
-  showToast('PDF Quote vs Aktual berhasil dibuat.');
+    let y=doc.lastAutoTable.finalY+8;
+    if(y>175){doc.addPage();y=16;}
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('Ringkasan Profit Proyek',14,y);
+    y+=6;
+    doc.autoTable({startY:y,theme:'grid',head:[['Nilai Quote / Revenue','Actual Project Cost','Gross Profit Actual','Tax 4%','Net Profit After Tax']],body:[[rupiah(data.revenue),rupiah(data.projectActualCost),rupiah(data.gross),rupiah(data.tax),rupiah(data.net)]],styles:{fontSize:9,cellPadding:3,halign:'right'},headStyles:{fillColor:[28,75,77],textColor:255},margin:{left:10,right:10}});
+    doc.save(`${reportFileBase()}.pdf`);
+    showToast('PDF berhasil diunduh.');
+  }catch(e){ console.error('PDF export error:',e); showToast('PDF gagal dibuat: '+(e.message||'cek Console')); }
 }
 
 function exportQuoteActualExcel(){
-  const data=quoteActualReportData();
-  if(!data){showToast('Pilih proyek dulu.');return;}
-
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet([
-    ['QUOTE VS AKTUAL / REALISASI'],
-    [`Proyek: ${data.proj.name||'-'}`],
-    [`Klien: ${data.proj.client||'-'}`],
-    [],
-    ['No.','Deskripsi Quote / Yang Harus Dibeli','Bagian','QUOTE / PLAN','','AKTUAL / REALISASI','',''],
-    ['','','','Quote','Plan','Realisasi / Nota','Sisa Budget','Selisih']
-  ]);
-
-  const startRow=7;
-  const rowsAoa=data.rows.map(r=>{
-    const details=r.actuals.length
-      ? r.actuals.map(t=>`${formatDateShort(t.date)} | ${t.vendor||'-'} | ${t.description||'-'} | ${rupiah(t.amount)}${t.ref?` | Ref: ${t.ref}`:''}${t.note?` | ${t.note}`:''}`).join('\n')
-      : 'Belum ada nota / realisasi';
-    return [r.no,r.description,r.section,r.quote,r.plan,details+`\nTOTAL AKTUAL: ${rupiah(r.actual)}`,r.remaining,r.variance];
-  });
-  rowsAoa.push(['','','TOTAL',data.totalQuote,data.totalQuote,`TOTAL AKTUAL: ${rupiah(data.totalActual)}`,data.totalRemaining,data.totalVariance]);
-
-  XLSX.utils.sheet_add_aoa(ws,rowsAoa,{origin:'A7'});
-
-  ws['A1'].s={font:{bold:true,sz:16},alignment:{horizontal:'left'}};
-  ws['A5'].s={font:{bold:true,color:'FFFFFF'},fill:{fgColor:{rgb:'1C4B4D'}},alignment:{horizontal:'center',vertical:'center'}};
-  ws['D5'].s={font:{bold:true,color:'FFFFFF'},fill:{fgColor:{rgb:'1C4B4D'}},alignment:{horizontal:'center',vertical:'center'}};
-  ws['F5'].s={font:{bold:true,color:'FFFFFF'},fill:{fgColor:{rgb:'1C4B4D'}},alignment:{horizontal:'center',vertical:'center'}};
-  ['A6','B6','C6','D6','E6','F6','G6','H6'].forEach(a=>{
-    ws[a].s={font:{bold:true,color:'FFFFFF'},fill:{fgColor:{rgb:'3C6F70'}},alignment:{horizontal:'center',vertical:'center',wrapText:true}};
-  });
-
-  // Merge the grouped headers exactly like the PDF/website concept.
-  ws['!merges']=[
-    {s:{r:0,c:0},e:{r:0,c:7}},
-    {s:{r:4,c:0},e:{r:5,c:0}},
-    {s:{r:4,c:1},e:{r:5,c:1}},
-    {s:{r:4,c:2},e:{r:5,c:2}},
-    {s:{r:4,c:3},e:{r:4,c:4}},
-    {s:{r:4,c:5},e:{r:4,c:7}}
-  ];
-
-  const lastRow=6+rowsAoa.length;
-  for(let r=6;r<lastRow;r++){
-    ws[XLSX.utils.encode_cell({r,c:0})].s={alignment:{horizontal:'center',vertical:'top'}};
-    ws[XLSX.utils.encode_cell({r,c:1})].s={alignment:{vertical:'top',wrapText:true}};
-    ws[XLSX.utils.encode_cell({r,c:2})].s={alignment:{vertical:'top'}};
-    ['D','E','G','H'].forEach(col=>{
-      const cell=ws[`${col}${r+1}`];
-      if(cell) cell.s={alignment:{horizontal:'right',vertical:'top'},numFmt:'#,##0'};
+  try{
+    const data=quoteActualReportData();
+    if(!data){showToast('Pilih proyek dulu.');return;}
+    if(!window.XLSX) throw new Error('Library Excel belum termuat.');
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet([
+      ['QUOTE VS AKTUAL / REALISASI'],
+      [`Proyek: ${data.proj.name||'-'}`],
+      [`Klien: ${data.proj.client||'-'}`],[],
+      ['No.','Deskripsi Quote / Yang Harus Dibeli','Bagian','QUOTE / PLAN','','AKTUAL / REALISASI','','',''],
+      ['','','','Quote','Plan','Aktual','Keterangan Realisasi','Sisa Budget','Selisih']
+    ]);
+    const rowsAoa=data.rows.map(r=>{
+      const notes=r.actuals.length ? r.actuals.map(t=>[
+        formatDateShort(t.date),`Untuk quote: ${r.description}`,`Vendor/Toko: ${t.vendor||'-'}`,`Keterangan: ${t.description||'-'}`,`No. Nota/Ref: ${t.ref||'-'}`,t.note?`Catatan: ${t.note}`:''
+      ].filter(Boolean).join(' | ')).join('\n') : 'Belum ada realisasi';
+      return [r.no,r.description,r.section,r.quote,r.plan,r.actual,notes,r.remaining,r.variance];
     });
-    const actualCell=ws[`F${r+1}`];
-    if(actualCell) actualCell.s={alignment:{vertical:'top',wrapText:true}};
-  }
-
-  // Color Sisa Budget and Selisih: yellow positive, green zero, red negative/over.
-  data.rows.forEach((item,i)=>{
-    const excelRow=7+i;
-    const remCell=ws[`G${excelRow}`], varCell=ws[`H${excelRow}`];
-    const remColor=item.remaining<0?'FFD8D8':(item.remaining===0?'D8F3DC':'FFF3BF');
-    const varColor=item.variance>0?'FFD8D8':(item.variance===0?'D8F3DC':'FFF3BF');
-    if(remCell) remCell.s={fill:{fgColor:{rgb:remColor}},font:{bold:true},alignment:{horizontal:'right'},numFmt:'#,##0'};
-    if(varCell) varCell.s={fill:{fgColor:{rgb:varColor}},font:{bold:true},alignment:{horizontal:'right'},numFmt:'#,##0'};
-  });
-
-  const totalExcelRow=7+data.rows.length;
-  ['A','B','C','D','E','F','G','H'].forEach(col=>{
-    const cell=ws[`${col}${totalExcelRow}`];
-    if(cell) cell.s={font:{bold:true},fill:{fgColor:{rgb:'E8EEEE'}},alignment:{vertical:'top',wrapText:true},numFmt:['D','E','G','H'].includes(col)?'#,##0':undefined};
-  });
-
-  // Profit summary section below the comparison table.
-  const profitStart=totalExcelRow+3;
-  XLSX.utils.sheet_add_aoa(ws,[
-    ['RINGKASAN PROFIT PROYEK'],
-    ['Nilai Quote / Revenue','Actual Project Cost','Gross Profit Actual','Tax 4%','Net Profit After Tax'],
-    [data.revenue,data.projectActualCost,data.gross,data.tax,data.net]
-  ],{origin:`A${profitStart}`});
-  ws[`A${profitStart}`].s={font:{bold:true,sz:13}};
-  for(let c=0;c<5;c++){
-    const headerCell=ws[XLSX.utils.encode_cell({r:profitStart,c})];
-    if(headerCell) headerCell.s={font:{bold:true,color:'FFFFFF'},fill:{fgColor:{rgb:'1C4B4D'}},alignment:{horizontal:'center',wrapText:true}};
-    const valueCell=ws[XLSX.utils.encode_cell({r:profitStart+1,c})];
-    if(valueCell) valueCell.s={font:{bold:true},alignment:{horizontal:'right'},numFmt:'#,##0'};
-  }
-  const grossColor=data.gross<0?'FFD8D8':(data.gross===0?'FFF3BF':'D8F3DC');
-  const netColor=data.net<0?'FFD8D8':(data.net===0?'FFF3BF':'D8F3DC');
-  ws[`C${profitStart+2}`].s={fill:{fgColor:{rgb:grossColor}},font:{bold:true},numFmt:'#,##0',alignment:{horizontal:'right'}};
-  ws[`E${profitStart+2}`].s={fill:{fgColor:{rgb:netColor}},font:{bold:true},numFmt:'#,##0',alignment:{horizontal:'right'}};
-
-  ws['!cols']=[
-    {wch:7},{wch:42},{wch:18},{wch:18},{wch:18},{wch:58},{wch:20},{wch:20}
-  ];
-  ws['!rows']=[
-    {hpt:24},{hpt:18},{hpt:18},{hpt:8},{hpt:24},{hpt:28}
-  ];
-
-  XLSX.utils.book_append_sheet(wb,ws,'Quote vs Aktual');
-
-  // Separate detail sheet for presentation/follow-up, while keeping the main sheet in the same website layout.
-  const detailRows=[];
-  data.rows.forEach(r=>r.actuals.forEach(t=>{
-    detailRows.push({
-      'No Quote':r.no,
-      'Deskripsi Quote':r.description,
-      'Bagian':r.section,
-      'Tanggal Nota':t.date,
-      'Vendor / Toko':t.vendor||'',
-      'Deskripsi Aktual':t.description||'',
-      'No. Nota / Ref':t.ref||'',
-      'Aktual':Number(t.amount||0),
-      'Catatan':t.note||''
+    rowsAoa.push(['','','TOTAL',data.totalQuote,data.totalQuote,data.totalActual,'Seluruh realisasi pada item quote terkait',data.totalRemaining,data.totalVariance]);
+    XLSX.utils.sheet_add_aoa(ws,rowsAoa,{origin:'A7'});
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}},{s:{r:4,c:0},e:{r:5,c:0}},{s:{r:4,c:1},e:{r:5,c:1}},{s:{r:4,c:2},e:{r:5,c:2}},{s:{r:4,c:3},e:{r:4,c:4}},{s:{r:4,c:5},e:{r:4,c:8}}];
+    ws['!cols']=[{wch:7},{wch:45},{wch:18},{wch:18},{wch:18},{wch:18},{wch:65},{wch:20},{wch:20}];
+    ws['A1'].s={font:{bold:true,sz:16}};
+    ['A5','D5','F5'].forEach(a=>ws[a].s={font:{bold:true,color:'FFFFFF'},fill:{fgColor:{rgb:'1C4B4D'}},alignment:{horizontal:'center',vertical:'center'}});
+    ['A6','B6','C6','D6','E6','F6','G6','H6','I6'].forEach(a=>ws[a].s={font:{bold:true,color:'FFFFFF'},fill:{fgColor:{rgb:'3C6F70'}},alignment:{horizontal:'center',vertical:'center',wrapText:true}});
+    const lastRow=7+rowsAoa.length-1;
+    for(let r=7;r<=lastRow;r++){
+      ['A','B','C','F','G'].forEach(col=>{const c=ws[`${col}${r}`];if(c)c.s={alignment:{vertical:'top',wrapText:true}};});
+      ['D','E','H','I'].forEach(col=>{const c=ws[`${col}${r}`];if(c)c.s={alignment:{horizontal:'right',vertical:'top'},numFmt:'#,##0'};});
+    }
+    data.rows.forEach((item,i)=>{
+      const er=7+i, rem=ws[`H${er}`], vari=ws[`I${er}`];
+      const rc=item.remaining<0?'FFD8D8':(item.remaining===0?'D8F3DC':'FFF3BF');
+      const vc=item.variance>0?'FFD8D8':(item.variance===0?'D8F3DC':'FFF3BF');
+      if(rem)rem.s={fill:{fgColor:{rgb:rc}},font:{bold:true},alignment:{horizontal:'right'},numFmt:'#,##0'};
+      if(vari)vari.s={fill:{fgColor:{rgb:vc}},font:{bold:true},alignment:{horizontal:'right'},numFmt:'#,##0'};
     });
-  }));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detailRows.length?detailRows:[{'Info':'Belum ada nota / realisasi'}]),'Detail Realisasi');
+    for(let c=0;c<9;c++){const cell=ws[XLSX.utils.encode_cell({r:lastRow-1,c})];if(cell)cell.s={font:{bold:true},fill:{fgColor:{rgb:'E8EEEE'}},alignment:{vertical:'top',wrapText:true}};}
 
-  XLSX.writeFile(wb,`${reportFileBase()}.xlsx`);
-  showToast('Excel Quote vs Aktual berhasil dibuat.');
+    const ps=lastRow+3;
+    XLSX.utils.sheet_add_aoa(ws,[['RINGKASAN PROFIT PROYEK'],['Nilai Quote / Revenue','Actual Project Cost','Gross Profit Actual','Tax 4%','Net Profit After Tax'],[data.revenue,data.projectActualCost,data.gross,data.tax,data.net]],{origin:`A${ps}`});
+    ws[`A${ps}`].s={font:{bold:true,sz:13}};
+    for(let c=0;c<5;c++){ws[XLSX.utils.encode_cell({r:ps,c})].s={font:{bold:true,color:'FFFFFF'},fill:{fgColor:{rgb:'1C4B4D'}},alignment:{horizontal:'center',wrapText:true}};ws[XLSX.utils.encode_cell({r:ps+1,c})].s={font:{bold:true},alignment:{horizontal:'right'},numFmt:'#,##0'};}
+    const gc=data.gross<0?'FFD8D8':(data.gross===0?'FFF3BF':'D8F3DC'), nc=data.net<0?'FFD8D8':(data.net===0?'FFF3BF':'D8F3DC');
+    ws[`C${ps+2}`].s={fill:{fgColor:{rgb:gc}},font:{bold:true},numFmt:'#,##0',alignment:{horizontal:'right'}};ws[`E${ps+2}`].s={fill:{fgColor:{rgb:nc}},font:{bold:true},numFmt:'#,##0',alignment:{horizontal:'right'}};
+    XLSX.utils.book_append_sheet(wb,ws,'Quote vs Aktual');
+
+    const detail=[];
+    data.rows.forEach(r=>r.actuals.forEach(t=>detail.push({'No Quote':r.no,'Deskripsi Quote':r.description,'Bagian':r.section,'Tanggal':t.date,'Nominal Aktual':Number(t.amount||0),'Vendor / Toko':t.vendor||'','Keterangan':t.description||'','No. Nota / Ref':t.ref||'','Catatan':t.note||''})));
+    const dws=XLSX.utils.json_to_sheet(detail.length?detail:[{'Info':'Belum ada nota / realisasi'}]);
+    dws['!cols']=[{wch:10},{wch:45},{wch:18},{wch:14},{wch:18},{wch:24},{wch:50},{wch:20},{wch:50}];
+    XLSX.utils.book_append_sheet(wb,dws,'Detail Realisasi');
+
+    const filename=`${reportFileBase()}.xlsx`;
+    try{XLSX.writeFile(wb,filename);}catch(e){
+      const arr=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+      if(!downloadBlobFile(new Blob([arr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),filename)) throw e;
+    }
+    showToast('Excel berhasil diunduh.');
+  }catch(e){ console.error('Excel export error:',e); showToast('Excel gagal dibuat: '+(e.message||'cek Console')); }
 }
 
 function exportMonthlyPlan(){ const proj=getActiveProject();if(!proj){showToast('Pilih proyek dulu.');return;} const month=document.getElementById('summary-month').value||new Date().toISOString().slice(0,7),plans=(state.purchasePlans||[]).filter(p=>p.projectId===activeProjectId&&p.date.slice(0,7)===month),actual=getProjectTransactions().filter(t=>t.date.slice(0,7)===month),items=quoteItemsForProject().filter(q=>q.section==='Material'||q.section==='Vendor Fee'),rows=items.map(q=>({Item:q.description,Bagian:q.section,Budget:q.total,Plan:plans.filter(p=>p.quoteItemId===q.id).reduce((a,p)=>a+p.amount,0),Actual:actual.filter(t=>t.quoteItemId===q.id).reduce((a,t)=>a+t.amount,0)})); const revenue=proj.quoteAmount||0,cost=actual.reduce((a,t)=>a+t.amount,0),gross=revenue-cost,tax=Math.max(gross,0)*0.04,net=gross-tax; const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Proyek:proj.name,Klien:proj.client,Periode:formatMonthLabel(month),'Revenue Quote':revenue,'Actual Cost':cost,'Gross Profit':gross,'Tax 4%':tax,'Net Profit':net}]),'Summary');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{Info:'Belum ada budget item'}]),'Plan vs Actual');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(plans.map(p=>{const q=quoteItemsForProject().find(x=>x.id===p.quoteItemId);return {Tanggal:p.date,Item:q?.description||'',Vendor:p.vendor,Plan:p.amount,Catatan:p.note}})),'Plan Bulanan');XLSX.writeFile(wb,`rekapan-proyek-${proj.name.replace(/\s+/g,'-').toLowerCase()}-${month}.xlsx`);showToast('Rekapan bulanan berhasil diunduh.'); }
