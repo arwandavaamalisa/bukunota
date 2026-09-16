@@ -326,26 +326,6 @@
   .section-pill{display:inline-block;padding:3px 7px;border:1px solid var(--line);font-size:10px;font-weight:600}
   .upload-preview{background:#faf8f2;border:1px dashed var(--line);padding:12px;margin-top:10px;font-size:12px}
   .kpi-note{font-size:11px;color:var(--muted);margin-top:4px}
-
-  .quote-reality-table th,.quote-reality-table td{vertical-align:top;}
-  .quote-reality-table .num-col{width:42px;text-align:center;font-weight:600;}
-  .quote-reality-table .desc-col{min-width:230px;}
-  .quote-reality-table .money-col{min-width:125px;text-align:right;vertical-align:top;font-variant-numeric:tabular-nums;}
-  .quote-reality-table .reality-col{min-width:290px;}
-  .reality-entry{padding:7px 0;border-bottom:1px solid #eee8dc;}
-  .reality-entry:last-child{border-bottom:none;}
-  .reality-entry-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;}
-  .reality-amount{font-weight:700;white-space:nowrap;color:var(--ink);}
-  .reality-desc{font-weight:600;}
-  .reality-meta{font-size:11px;color:var(--muted);margin-top:2px;}
-  .reality-empty{color:var(--muted);font-style:italic;font-size:12px;padding:8px 0;}
-  .balance-cell{font-weight:700;text-align:right;font-variant-numeric:tabular-nums;}
-  .balance-positive{background:#fff2bf;color:#735b00;}
-  .balance-zero{background:#e2ede4;color:var(--ok);}
-  .balance-negative{background:#f4e0d8;color:var(--warn);}
-  .quote-total-row td{font-weight:700;border-top:2px solid var(--ink);background:#faf8f2;}
-  .quote-reality-note{font-size:12px;color:var(--muted);margin-top:10px;}
-  .download-reality-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
 </style>
 </head>
 <body>
@@ -693,10 +673,7 @@
           </div>
 
           <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-              <h2 style="margin:0;">Quote vs Realita & Profit Proyek</h2>
-              <div class="download-reality-actions" style="margin:0;"><button class="btn secondary small" id="exportQuoteRealityExcelBtn">⬇ Excel Quote vs Realita</button><button class="btn secondary small" id="exportQuoteRealityPdfBtn">⬇ PDF Quote vs Realita</button></div>
-            </div>
+            <h2>Plan vs Actual & Profit Proyek</h2>
             <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);">
               <div class="stat"><div class="label">Actual Project Cost</div><div class="value warn" id="profit-actual-cost">Rp 0</div></div>
               <div class="stat"><div class="label">Gross Profit Actual</div><div class="value ok" id="profit-gross">Rp 0</div></div>
@@ -705,7 +682,7 @@
             </div>
             <div style="overflow-x:auto;margin-top:10px;">
               <table>
-                <thead><tr><th class="num-col">No.</th><th class="desc-col">Deskripsi Quote / Yang Harus Dibeli</th><th>Bagian</th><th class="money-col">Quote</th><th class="money-col">Plan</th><th class="reality-col">Realita / Nota</th><th class="money-col">Sisa Budget</th><th class="money-col">Selisih</th></tr></thead>
+                <thead><tr><th>Budget Item</th><th>Bagian</th><th class="amount">Budget</th><th class="amount">Plan</th><th class="amount">Actual</th><th class="amount">Sisa Budget</th><th class="amount">Variance</th><th>Status</th></tr></thead>
                 <tbody id="planActualBody"></tbody>
               </table>
             </div>
@@ -1317,64 +1294,11 @@ function renderPurchasePlans(){
   list.forEach(p=>{ const q=quoteItemsForProject().find(x=>x.id===p.quoteItemId); const tr=document.createElement('tr'); tr.innerHTML=`<td>${formatDateShort(p.date)}</td><td>${q?escapeHtml(q.description):'Item terhapus'}</td><td>${escapeHtml(p.vendor||'-')}</td><td class="amount">${rupiah(p.amount)}</td><td>${escapeHtml(p.note||'')}</td><td><button class="icon-btn" title="Hapus">✕</button></td>`; tr.querySelector('button').addEventListener('click',()=>openConfirmDeletePurchasePlan(p)); body.appendChild(tr); });
 }
 function renderPlanActual(){
-  const body=document.getElementById('planActualBody'); if(!body)return;
-  body.innerHTML='';
-  const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee');
-  document.getElementById('planActualEmpty').style.display=items.length?'none':'block';
-  let totalQuote=0,totalPlan=0,totalActual=0;
-  const txs=getProjectTransactions().slice().sort((a,b)=>a.date.localeCompare(b.date));
-
-  items.forEach((q,idx)=>{
-    const budget=Number(q.total||0);
-    // Plan selalu mengikuti nilai Quote. Monthly purchase planning tetap menjadi jadwal pembelian,
-    // tetapi angka Plan pada kontrol Quote vs Realita adalah budget quote.
-    const plan=budget;
-    const actualRows=txs.filter(t=>t.quoteItemId===q.id);
-    const actual=actualRows.reduce((s,t)=>s+Number(t.amount||0),0);
-    const remaining=plan-actual;
-    const variance=actual-plan;
-    const balanceClass=remaining<0?'balance-negative':(remaining===0?'balance-zero':'balance-positive');
-
-    totalQuote+=budget; totalPlan+=plan; totalActual+=actual;
-
-    const realityHtml=actualRows.length
-      ? actualRows.map(t=>`<div class="reality-entry">
-          <div class="reality-entry-top"><span class="reality-desc">${escapeHtml(t.description||'Pembelian')}</span><span class="reality-amount">${rupiah(t.amount)}</span></div>
-          <div class="reality-meta">${formatDateShort(t.date)}${t.vendor?' — Vendor: '+escapeHtml(t.vendor):''}${t.ref?' — Nota: '+escapeHtml(t.ref):''}</div>
-          ${t.note?`<div class="reality-meta">Catatan: ${escapeHtml(t.note)}</div>`:''}
-        </div>`).join('')
-      : '<div class="reality-empty">Belum dibeli / belum ada nota</div>';
-
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td class="num-col">${idx+1}</td>
-      <td class="desc-col"><strong>${escapeHtml(q.description)}</strong></td>
-      <td>${escapeHtml(q.section)}</td>
-      <td class="money-col">${rupiah(budget)}</td>
-      <td class="money-col">${rupiah(plan)}</td>
-      <td class="reality-col">${realityHtml}<div style="border-top:1px solid var(--line);margin-top:5px;padding-top:6px;display:flex;justify-content:space-between;gap:10px;font-weight:700;"><span>Total Realita</span><span>${rupiah(actual)}</span></div></td>
-      <td class="balance-cell ${balanceClass}">${rupiah(remaining)}</td>
-      <td class="money-col ${variance>0?'budget-over':(variance<0?'budget-ok':'diff-zero')}">${variance>0?'+':''}${rupiah(variance)}<div class="kpi-note">${plan>0?(actual/plan*100).toFixed(1):'0.0'}% realita</div></td>`;
-    body.appendChild(tr);
-  });
-
-  const totalRemaining=totalPlan-totalActual;
-  const totalVariance=totalActual-totalPlan;
-  const totalBalanceClass=totalRemaining<0?'balance-negative':(totalRemaining===0?'balance-zero':'balance-positive');
-  const totalTr=document.createElement('tr');
-  totalTr.className='quote-total-row';
-  totalTr.innerHTML=`<td colspan="3">TOTAL COST</td><td class="money-col">${rupiah(totalQuote)}</td><td class="money-col">${rupiah(totalPlan)}</td><td class="money-col">${rupiah(totalActual)}</td><td class="balance-cell ${totalBalanceClass}">${rupiah(totalRemaining)}</td><td class="money-col ${totalVariance>0?'budget-over':(totalVariance<0?'budget-ok':'diff-zero')}">${totalVariance>0?'+':''}${rupiah(totalVariance)}</td>`;
-  body.appendChild(totalTr);
-
-  const revenue=Number(getActiveProject()?.quoteAmount||quoteBudgetTotals().revenue||0);
-  const actualCost=getProjectTransactions().reduce((s,t)=>s+Number(t.amount||0),0);
-  const gross=revenue-actualCost, tax=Math.max(gross,0)*0.04, net=gross-tax;
-  document.getElementById('profit-actual-cost').textContent=rupiah(actualCost);
-  document.getElementById('profit-gross').textContent=rupiah(gross);
-  document.getElementById('profit-tax').textContent=rupiah(tax);
-  document.getElementById('profit-net').textContent=rupiah(net);
-  document.getElementById('profit-gross').className='value '+(gross<0?'warn':'ok');
-  document.getElementById('profit-net').className='value '+(net<0?'warn':'ok');
+  const body=document.getElementById('planActualBody'); if(!body)return; body.innerHTML='';
+  const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee'), am=actualByQuoteItem(), pm=planByQuoteItem(); document.getElementById('planActualEmpty').style.display=items.length?'none':'block';
+  items.forEach(q=>{ const budget=q.total||0, plan=pm[q.id]||0, actual=am[q.id]||0, remaining=budget-actual, variance=actual-budget, over=variance>0; const tr=document.createElement('tr'); tr.innerHTML=`<td>${escapeHtml(q.description)}</td><td>${escapeHtml(q.section)}</td><td class="amount">${rupiah(budget)}</td><td class="amount">${rupiah(plan)}</td><td class="amount">${rupiah(actual)}</td><td class="amount ${remaining<0?'budget-over':'budget-ok'}">${rupiah(remaining)}</td><td class="amount ${over?'budget-over':'budget-ok'}">${over?'+':''}${rupiah(variance)}</td><td><span class="${over?'budget-over':'budget-ok'}">${over?'OVER BUDGET':(actual>0?'TERKENDALI':'BELUM BELI')}</span></td>`; body.appendChild(tr); });
+  const revenue=Number(getActiveProject()?.quoteAmount||0), actualCost=getProjectTransactions().reduce((s,t)=>s+t.amount,0), gross=revenue-actualCost, tax=Math.max(gross,0)*0.04, net=gross-tax;
+  document.getElementById('profit-actual-cost').textContent=rupiah(actualCost); document.getElementById('profit-gross').textContent=rupiah(gross); document.getElementById('profit-tax').textContent=rupiah(tax); document.getElementById('profit-net').textContent=rupiah(net); document.getElementById('profit-gross').className='value '+(gross<0?'warn':'ok'); document.getElementById('profit-net').className='value '+(net<0?'warn':'ok');
 }
 function renderQuoteData(){ renderQuoteItemSelects(); renderQuoteItems(); renderPurchasePlans(); renderPlanActual(); }
 function openAddQuoteItemModal(){
@@ -1388,57 +1312,6 @@ async function handleQuoteFileUpload(e){ const file=e.target.files?.[0]; e.targe
 async function parseQuotePdf(file){ const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise, out=[]; for(let pg=1;pg<=pdf.numPages;pg++){ const page=await pdf.getPage(pg), content=await page.getTextContent(), groups={}; content.items.forEach(it=>{const y=Math.round(it.transform[5]/2)*2;(groups[y] ||= []).push({x:it.transform[4],s:it.str});}); let section='Revenue'; Object.keys(groups).map(Number).sort((a,b)=>b-a).forEach(y=>{const line=groups[y].sort((a,b)=>a.x-b.x).map(x=>x.s).join(' ').replace(/\s+/g,' ').trim(); if(!line)return; if(/PROPOSED TO VENDOR/i.test(line))section='Vendor Fee'; else if(/ESTIMATED MATERIAL/i.test(line))section='Material'; else if(/ESTIMATED TAX/i.test(line))section='Tax & Contingency'; else if(/ESTIMATED GROSS/i.test(line))section='Gross Profit'; const nums=[...line.matchAll(/(?:Rp\s*)?(-?[\d][\d.,]*)\s*Rp?/gi)].map(m=>parseRpLoose(m[1])); if(nums.length>=2&&!/TOTAL BIAYA|GRAND TOTAL|SUMMARY|NO\.|JENIS PEKERJAAN|WORK DESCRIPTION/i.test(line)){const total=nums[nums.length-1],unitPrice=nums[nums.length-2];let desc=line.replace(/(?:Rp\s*)?-?[\d][\d.,]*\s*Rp?/gi,'').replace(/\s+/g,' ').trim();const qm=desc.match(/^(.*?)(?:\s)(\d+(?:[.,]\d+)?)\s+([A-Za-z²³]+)\s*$/);let qty=qm?parseFloat(qm[2].replace(',','.')):1,unit=qm?qm[3]:'unit';if(qm)desc=qm[1].trim();out.push({section,description:desc,qty,unit,unitPrice,total});}});} const seen=new Set(); return out.filter(r=>{const k=[r.section,r.description,r.total].join('|');if(seen.has(k))return false;seen.add(k);return true;}); }
 async function parseQuoteSpreadsheet(file){ const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),out=[]; wb.SheetNames.forEach(sn=>{XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''}).forEach(row=>{const cells=row.map(x=>String(x).trim()).filter(Boolean),joined=cells.join(' | ');let section='Revenue';if(/PROPOSED TO VENDOR|VENDOR|FEE/i.test(joined))section='Vendor Fee';else if(/ESTIMATED MATERIAL|MATERIAL/i.test(joined))section='Material';else if(/ESTIMATED TAX|CONTINGENCY/i.test(joined))section='Tax & Contingency';else if(/GROSS PROFIT/i.test(joined))section='Gross Profit';const nums=cells.map(parseRpLoose).filter(n=>n>0);if(cells.length>=2&&nums.length>=1&&!/TOTAL|SUMMARY|DESCRIPTION|JENIS PEKERJAAN|WORK DESCRIPTION|QTY|VOLUME|UNIT PRICE/i.test(joined)){const total=nums[nums.length-1],unitPrice=nums.length>=2?nums[nums.length-2]:total,desc=cells.find(c=>/[A-Za-zÀ-ÿ]/.test(c)&&!/^Rp/i.test(c)&&!/^\d/.test(c))||cells[0];out.push({section,description:desc,qty:1,unit:'unit',unitPrice,total});}});}); return out; }
 function openQuoteImportPreview(rows,fileName){ const clean=rows.slice(0,100); openModal({title:'Preview hasil baca quote',confirmLabel:`Import ${clean.length} item`,formHtml:`<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">File: ${escapeHtml(fileName)} — periksa hasil deteksi sebelum disimpan.</div><div style="max-height:420px;overflow:auto;border:1px solid var(--line);"><table><thead><tr><th>Bagian</th><th>Item</th><th>Qty</th><th>Unit</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>${clean.map((r,i)=>`<tr><td><select class="qi-prev-section" data-i="${i}"><option ${r.section==='Material'?'selected':''}>Material</option><option ${r.section==='Vendor Fee'?'selected':''}>Vendor Fee</option><option ${r.section==='Revenue'?'selected':''}>Revenue</option><option ${r.section==='Tax & Contingency'?'selected':''}>Tax & Contingency</option><option ${r.section==='Gross Profit'?'selected':''}>Gross Profit</option></select></td><td>${escapeHtml(r.description)}</td><td>${r.qty||1}</td><td>${escapeHtml(r.unit||'unit')}</td><td>${rupiah(r.unitPrice||0)}</td><td>${rupiah(r.total||0)}</td></tr>`).join('')}</tbody></table></div>`,onSubmit:async()=>{const payload=clean.map((r,i)=>({...r,section:document.querySelector(`.qi-prev-section[data-i="${i}"]`).value}));const inserts=payload.map(r=>({user_id:currentUser.id,project_id:activeProjectId,section:r.section,description:r.description,qty:r.qty||1,unit:r.unit||'unit',unit_price:r.unitPrice||0,total:r.total||0,source_file:fileName}));const {error}=await sb.from('project_quote_items').insert(inserts);if(error){console.error(error);showToast('Import gagal. Jalankan SQL migrasi dulu.');return false;}const rev=payload.filter(x=>x.section==='Revenue').reduce((a,x)=>a+x.total,0);if(rev>0)await sb.from('projects').update({quote_amount:rev}).eq('id',activeProjectId);await loadData();renderAll();showToast(`${inserts.length} item quote berhasil diimport.`);}}); }
-function quoteRealityRows(){
-  const items=quoteItemsForProject().filter(x=>x.section==='Material'||x.section==='Vendor Fee');
-  const txs=getProjectTransactions().slice().sort((a,b)=>a.date.localeCompare(b.date));
-  return items.map((q,i)=>{
-    const actualRows=txs.filter(t=>t.quoteItemId===q.id);
-    const quote=Number(q.total||0), actual=actualRows.reduce((s,t)=>s+Number(t.amount||0),0);
-    return {no:i+1,description:q.description,section:q.section,quote,plan:quote,actual,remaining:quote-actual,variance:actual-quote,actualRows};
-  });
-}
-function exportQuoteRealityExcel(){
-  const proj=getActiveProject(); if(!proj){showToast('Pilih proyek dulu.');return;}
-  const rows=quoteRealityRows();
-  const revenue=Number(proj.quoteAmount||quoteBudgetTotals().revenue||0);
-  const actualCost=getProjectTransactions().reduce((s,t)=>s+Number(t.amount||0),0);
-  const gross=revenue-actualCost,tax=Math.max(gross,0)*0.04,net=gross-tax;
-  const wb=XLSX.utils.book_new();
-  const summary=[
-    {Keterangan:'Proyek',Nilai:proj.name},{Keterangan:'Klien',Nilai:proj.client||'-'},
-    {Keterangan:'Quote / Revenue',Nilai:revenue},{Keterangan:'Actual Project Cost',Nilai:actualCost},
-    {Keterangan:'Gross Profit Actual',Nilai:gross},{Keterangan:'Tax 4%',Nilai:tax},{Keterangan:'Net Profit After Tax',Nilai:net}
-  ];
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),'Summary');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.map(r=>({No:r.no,'Deskripsi Quote / Yang Harus Dibeli':r.description,Bagian:r.section,Quote:r.quote,Plan:r.plan,Realita:r.actual,'Sisa Budget':r.remaining,Selisih:r.variance,'% Realita':r.plan? r.actual/r.plan:0}))),'Quote vs Realita');
-  const detail=[]; rows.forEach(r=>r.actualRows.forEach(t=>detail.push({No:r.no,'Item Quote':r.description,Tanggal:t.date,Deskripsi:t.description,Vendor:t.vendor||'-','No. Nota':t.ref||'-',Jumlah:t.amount,Catatan:t.note||'-'})));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detail.length?detail:[{Info:'Belum ada nota / pembelian'}]),'Detail Nota');
-  XLSX.writeFile(wb,`quote-vs-realita-${proj.name.replace(/\s+/g,'-').toLowerCase()}.xlsx`);
-  showToast('Excel Quote vs Realita berhasil diunduh.');
-}
-function exportQuoteRealityPdf(){
-  const proj=getActiveProject(); if(!proj){showToast('Pilih proyek dulu.');return;}
-  const rows=quoteRealityRows();
-  const revenue=Number(proj.quoteAmount||quoteBudgetTotals().revenue||0);
-  const actualCost=getProjectTransactions().reduce((s,t)=>s+Number(t.amount||0),0);
-  const gross=revenue-actualCost,tax=Math.max(gross,0)*0.04,net=gross-tax;
-  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
-  const pageW=doc.internal.pageSize.getWidth();
-  doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text('QUOTE VS REALITA',14,15);
-  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text(`Proyek: ${proj.name}`,14,21);if(proj.client)doc.text(`Klien: ${proj.client}`,14,26);
-  const body=rows.map(r=>[String(r.no),r.description,r.section,rupiah(r.quote),rupiah(r.plan),r.actualRows.length?r.actualRows.map(t=>`${formatDateShort(t.date)} — ${t.description} — ${rupiah(t.amount)}`).join('\n'):'Belum dibeli',rupiah(r.remaining),rupiah(r.variance)]);
-  const tq=rows.reduce((s,r)=>s+r.quote,0),ta=rows.reduce((s,r)=>s+r.actual,0),tr=tq-ta,tv=ta-tq;
-  body.push([{content:'TOTAL COST',colSpan:3,styles:{fontStyle:'bold'}},rupiah(tq),rupiah(tq),rupiah(ta),rupiah(tr),rupiah(tv)]);
-  doc.autoTable({startY:31,head:[['No.','Deskripsi Quote / Yang Harus Dibeli','Bagian','Quote','Plan','Realita / Nota','Sisa Budget','Selisih']],body,styles:{fontSize:7.5,cellPadding:2,valign:'top'},headStyles:{fillColor:[28,75,77]},columnStyles:{0:{cellWidth:9},1:{cellWidth:58},2:{cellWidth:28},3:{halign:'right',cellWidth:28},4:{halign:'right',cellWidth:28},5:{cellWidth:67},6:{halign:'right',cellWidth:28},7:{halign:'right',cellWidth:28}},margin:{left:10,right:10}});
-  let y=doc.lastAutoTable.finalY+8;if(y>185){doc.addPage();y=15;}
-  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('SUMMARY PROYEK',14,y);y+=6;
-  doc.autoTable({startY:y,theme:'grid',head:[['Quote / Revenue','Actual Cost','Gross Profit','Tax 4%','Net Profit After Tax']],body:[[rupiah(revenue),rupiah(actualCost),rupiah(gross),rupiah(tax),rupiah(net)]],styles:{fontSize:8.5,cellPadding:3},headStyles:{fillColor:[28,75,77]},margin:{left:14,right:14}});
-  y=doc.lastAutoTable.finalY+8;
-  const detail=[];rows.forEach(r=>r.actualRows.forEach(t=>detail.push([String(r.no),r.description,formatDateShort(t.date),t.description,t.vendor||'-',t.ref||'-',rupiah(t.amount)])));
-  if(detail.length){doc.setFont('helvetica','bold');doc.text('RINCIAN REALITA / NOTA',14,y);doc.autoTable({startY:y+4,head:[['No.','Item Quote','Tanggal','Deskripsi Nota','Vendor','No. Nota','Jumlah']],body:detail,styles:{fontSize:7.5,cellPadding:2},headStyles:{fillColor:[28,75,77]},columnStyles:{6:{halign:'right'}},margin:{left:14,right:14}});}
-  openPdfSafely(doc,`quote-vs-realita-${proj.name.replace(/\s+/g,'-').toLowerCase()}.pdf`);
-}
-
 function exportMonthlyPlan(){ const proj=getActiveProject();if(!proj){showToast('Pilih proyek dulu.');return;} const month=document.getElementById('summary-month').value||new Date().toISOString().slice(0,7),plans=(state.purchasePlans||[]).filter(p=>p.projectId===activeProjectId&&p.date.slice(0,7)===month),actual=getProjectTransactions().filter(t=>t.date.slice(0,7)===month),items=quoteItemsForProject().filter(q=>q.section==='Material'||q.section==='Vendor Fee'),rows=items.map(q=>({Item:q.description,Bagian:q.section,Budget:q.total,Plan:plans.filter(p=>p.quoteItemId===q.id).reduce((a,p)=>a+p.amount,0),Actual:actual.filter(t=>t.quoteItemId===q.id).reduce((a,t)=>a+t.amount,0)})); const revenue=proj.quoteAmount||0,cost=actual.reduce((a,t)=>a+t.amount,0),gross=revenue-cost,tax=Math.max(gross,0)*0.04,net=gross-tax; const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Proyek:proj.name,Klien:proj.client,Periode:formatMonthLabel(month),'Revenue Quote':revenue,'Actual Cost':cost,'Gross Profit':gross,'Tax 4%':tax,'Net Profit':net}]),'Summary');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{Info:'Belum ada budget item'}]),'Plan vs Actual');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(plans.map(p=>{const q=quoteItemsForProject().find(x=>x.id===p.quoteItemId);return {Tanggal:p.date,Item:q?.description||'',Vendor:p.vendor,Plan:p.amount,Catatan:p.note}})),'Plan Bulanan');XLSX.writeFile(wb,`rekapan-proyek-${proj.name.replace(/\s+/g,'-').toLowerCase()}-${month}.xlsx`);showToast('Rekapan bulanan berhasil diunduh.'); }
 
 // ===================== PROJECTS =====================
@@ -2493,112 +2366,100 @@ async function startApp(){
   renderAll();
 }
 
-function bindAuthEvents(){
+function initAuth(){
+  const emailEl = document.getElementById('auth-email');
+  const passwordEl = document.getElementById('auth-password');
   const loginBtn = document.getElementById('passwordLoginBtn');
   const signupBtn = document.getElementById('passwordSignupBtn');
-  const passwordInput = document.getElementById('auth-password');
-  const logoutBtn = document.getElementById('logoutBtn');
   const msg = document.getElementById('authMsg');
 
-  if(loginBtn && !loginBtn.dataset.bound){
-    loginBtn.dataset.bound = '1';
-    loginBtn.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      const email = document.getElementById('auth-email').value.trim();
-      const password = passwordInput.value;
-      if(!email || !password){ msg.textContent = 'Masukkan email dan password dulu ya.'; return; }
-      loginBtn.disabled = true;
-      signupBtn.disabled = true;
-      msg.textContent = 'Memproses login...';
-      try{
-        const { data, error } = await sb.auth.signInWithPassword({ email, password });
-        if(error) throw error;
-        currentUser = data.user;
-        msg.textContent = 'Login berhasil. Membuka Buku Nota...';
-        await startApp();
-      }catch(error){
-        console.error('LOGIN ERROR:', error);
-        msg.textContent = 'Login gagal: ' + (error.message || 'email atau password salah.');
-      }finally{
-        loginBtn.disabled = false;
-        signupBtn.disabled = false;
-      }
-    });
-  }
-
-  if(signupBtn && !signupBtn.dataset.bound){
-    signupBtn.dataset.bound = '1';
-    signupBtn.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      const email = document.getElementById('auth-email').value.trim();
-      const password = passwordInput.value;
-      if(!email || !password){ msg.textContent = 'Masukkan email dan password dulu ya.'; return; }
-      if(password.length < 6){ msg.textContent = 'Password minimal 6 karakter.'; return; }
-      loginBtn.disabled = true;
-      signupBtn.disabled = true;
-      msg.textContent = 'Membuat akun...';
-      try{
-        const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: window.location.href } });
-        if(error) throw error;
-        if(data.session && data.user){
-          currentUser = data.user;
-          msg.textContent = 'Akun berhasil dibuat. Membuka Buku Nota...';
-          await startApp();
-        }else{
-          msg.textContent = 'Akun berhasil dibuat. Cek email untuk konfirmasi sebelum login.';
-        }
-      }catch(error){
-        console.error('SIGNUP ERROR:', error);
-        msg.textContent = 'Gagal membuat akun: ' + (error.message || 'coba lagi.');
-      }finally{
-        loginBtn.disabled = false;
-        signupBtn.disabled = false;
-      }
-    });
-  }
-
-  if(passwordInput && !passwordInput.dataset.bound){
-    passwordInput.dataset.bound = '1';
-    passwordInput.addEventListener('keydown', e=>{
-      if(e.key === 'Enter') loginBtn.click();
-    });
-  }
-
-  if(logoutBtn && !logoutBtn.dataset.bound){
-    logoutBtn.dataset.bound = '1';
-    logoutBtn.addEventListener('click', async ()=>{ await sb.auth.signOut(); });
-  }
-}
-
-async function initAuth(){
-  // Pasang listener tombol SECARA SINKRON sebelum menunggu Supabase.
-  bindAuthEvents();
-
-  try{
-    const { data, error } = await sb.auth.getSession();
-    if(error) console.error('GET SESSION ERROR:', error);
-    const session = data && data.session;
-    if(session && session.user){
-      currentUser = session.user;
+  // PASANG EVENT AUTH TERLEBIH DAHULU.
+  // Jangan menunggu getSession(), supaya tombol tidak pernah mati karena loading/error Supabase.
+  if (loginBtn) loginBtn.onclick = async (e) => {
+    e.preventDefault();
+    const email = emailEl?.value.trim() || '';
+    const password = passwordEl?.value || '';
+    if(!email || !password){ if(msg) msg.textContent='Masukkan email dan password dulu ya.'; return; }
+    loginBtn.disabled = true;
+    signupBtn && (signupBtn.disabled = true);
+    if(msg) msg.textContent='Memproses login...';
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if(error) throw error;
+      currentUser = data.user;
+      if(msg) msg.textContent='Login berhasil.';
       await startApp();
+    } catch(error) {
+      console.error('Login error:', error);
+      if(msg) msg.textContent='Login gagal: ' + (error?.message || 'email atau password salah.');
+    } finally {
+      loginBtn.disabled = false;
+      signupBtn && (signupBtn.disabled = false);
     }
-  }catch(error){
-    console.error('AUTH SESSION ERROR:', error);
-    const msg = document.getElementById('authMsg');
-    if(msg) msg.textContent = 'Supabase belum bisa membaca sesi. Kamu tetap bisa mencoba Login lagi.';
-  }
+  };
 
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if(session && session.user){
+  if (signupBtn) signupBtn.onclick = async (e) => {
+    e.preventDefault();
+    const email = emailEl?.value.trim() || '';
+    const password = passwordEl?.value || '';
+    if(!email || !password){ if(msg) msg.textContent='Masukkan email dan password dulu ya.'; return; }
+    if(password.length < 6){ if(msg) msg.textContent='Password minimal 6 karakter.'; return; }
+    loginBtn && (loginBtn.disabled = true);
+    signupBtn.disabled = true;
+    if(msg) msg.textContent='Membuat akun...';
+    try {
+      const { data, error } = await sb.auth.signUp({
+        email, password,
+        options: { emailRedirectTo: window.location.origin + window.location.pathname }
+      });
+      if(error) throw error;
+      if(data.session && data.user){
+        currentUser = data.user;
+        if(msg) msg.textContent='Akun berhasil dibuat.';
+        await startApp();
+      } else {
+        if(msg) msg.textContent='Akun dibuat. Cek email untuk konfirmasi akun jika diminta Supabase.';
+      }
+    } catch(error) {
+      console.error('Signup error:', error);
+      if(msg) msg.textContent='Gagal membuat akun: ' + (error?.message || 'coba lagi.');
+    } finally {
+      loginBtn && (loginBtn.disabled = false);
+      signupBtn.disabled = false;
+    }
+  };
+
+  if (passwordEl) passwordEl.onkeydown = (e) => {
+    if(e.key === 'Enter') { e.preventDefault(); loginBtn?.click(); }
+  };
+
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) logoutBtn.onclick = async (e) => {
+    e.preventDefault();
+    await sb.auth.signOut();
+  };
+
+  // Baru setelah tombol hidup, cek session yang sudah tersimpan.
+  sb.auth.getSession().then(async ({ data, error }) => {
+    if(error){ console.error('Session check error:', error); return; }
+    if(data?.session?.user){
+      currentUser = data.session.user;
+      try { await startApp(); } catch(err) { console.error('Start app error:', err); }
+    }
+  }).catch(err => console.error('getSession error:', err));
+
+  sb.auth.onAuthStateChange((event, session) => {
+    if(session?.user){
       currentUser = session.user;
-      // Login handler sudah membuka app; event auth cukup memastikan state user.
-      if(document.getElementById('appRoot').style.display === 'none') await startApp();
+      // Jangan await langsung di callback auth untuk menghindari deadlock Supabase.
+      setTimeout(() => startApp().catch(err => console.error('Start app error:', err)), 0);
     } else if(event === 'SIGNED_OUT'){
       currentUser = null;
       state = { projects:[], transactions:[], expenses:[], projectPayments:[], maintenance:[], pettyCash:[], inventoryItems:[], inventoryMovements:[], quoteItems:[], purchasePlans:[] };
       activeProjectId = null;
       document.getElementById('appRoot').style.display = 'none';
       document.getElementById('authGate').style.display = 'flex';
+      if(msg) msg.textContent = '';
     }
   });
 }
@@ -2667,15 +2528,13 @@ function setupAppEvents(){
   document.getElementById('addQuoteItemBtn').addEventListener('click', openAddQuoteItemModal);
   document.getElementById('savePlanBtn').addEventListener('click', handleSavePurchasePlan);
   document.getElementById('exportMonthlyPlanBtn').addEventListener('click', exportMonthlyPlan);
-  document.getElementById('exportQuoteRealityExcelBtn')?.addEventListener('click', exportQuoteRealityExcel);
-  document.getElementById('exportQuoteRealityPdfBtn')?.addEventListener('click', exportQuoteRealityPdf);
   document.getElementById('plan-date').value = todayISO();
 
   // inventory
   document.getElementById('addInventoryItemBtn').addEventListener('click', handleAddInventoryItem);
   document.getElementById('mv-type').addEventListener('change', toggleMovementFields);
-  document.getElementById('mv-qty').addEventListener('input', ()=>{ if(typeof updateInventoryUnitCost==='function') updateInventoryUnitCost(); });
-  document.getElementById('mv-cost').addEventListener('input', ()=>{ if(typeof updateInventoryUnitCost==='function') updateInventoryUnitCost(); });
+  document.getElementById('mv-qty').addEventListener('input', updateInventoryUnitCost);
+  document.getElementById('mv-cost').addEventListener('input', updateInventoryUnitCost);
   document.getElementById('saveMovementBtn').addEventListener('click', handleSaveMovement);
   document.getElementById('mvfilter-item').addEventListener('change', renderInventoryMovementTable);
   document.getElementById('mvfilter-type').addEventListener('change', renderInventoryMovementTable);
