@@ -1547,31 +1547,39 @@ function makeSimplePdf(lines){
   return new Blob([pdf],{type:'application/pdf'});
 }
 function exportQuoteActualPdf(){
-  try{
-    const data=quoteActualReportData(); if(!data){showToast('Pilih proyek dulu.');return;}
-    const lines=[];
-    lines.push({text:'QUOTE VS AKTUAL / REALISASI',bold:true,size:14});
-    lines.push({text:`Proyek: ${data.proj.name||'-'}    Klien: ${data.proj.client||'-'}`,size:9});
-    lines.push({text:'',size:5});
-    lines.push({text:'No | DESKRIPSI QUOTE | BAGIAN | QUOTE | PLAN | AKTUAL | SISA | SELISIH',bold:true,size:8});
-    lines.push({text:'-' .repeat(120),size:6});
-    data.rows.forEach(r=>{
-      lines.push({text:`${r.no} | ${r.description} | ${r.section} | ${rupiah(r.quote)} | ${rupiah(r.plan)} | ${rupiah(r.actual)} | ${rupiah(r.remaining)} | ${r.variance>0?'+':''}${rupiah(r.variance)}`,size:7});
-      if(r.actuals.length){
-        r.actuals.forEach(t=>lines.push({text:`   REALISASI: ${formatDateShort(t.date)} | ${rupiah(t.amount)} | Untuk quote: ${r.description} | ${t.vendor||'-'} | ${t.description||'-'} | Nota/Ref: ${t.ref||'-'}`,size:7}));
-      } else lines.push({text:'   REALISASI: belum ada nota / realisasi',size:7});
-    });
-    lines.push({text:'-' .repeat(120),size:6});
-    lines.push({text:`TOTAL | QUOTE ${rupiah(data.totalQuote)} | PLAN ${rupiah(data.totalQuote)} | AKTUAL ${rupiah(data.totalActual)} | SISA ${rupiah(data.totalRemaining)} | SELISIH ${data.totalVariance>0?'+':''}${rupiah(data.totalVariance)}`,bold:true,size:8});
-    lines.push({text:'',size:6});
-    lines.push({text:'RINGKASAN PROFIT PROYEK',bold:true,size:11});
-    lines.push({text:`Revenue/Quote: ${rupiah(data.revenue)} | Actual Cost: ${rupiah(data.projectActualCost)} | Gross Profit: ${rupiah(data.gross)} | Tax 4%: ${rupiah(data.tax)} | Net Profit: ${rupiah(data.net)}`,size:8});
-    const ok=downloadBlobFile(makeSimplePdf(lines),`${reportFileBase()}.pdf`);
-    if(!ok) throw new Error('Browser menolak proses download PDF.');
-    showToast('PDF berhasil diunduh.');
-  }catch(e){console.error('PDF export error:',e);showToast('PDF gagal dibuat: '+(e.message||'coba lagi.'));}
+  const data=quoteActualReportData();
+  if(!data){showToast('Pilih proyek dulu.');return;}
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const money=n=>rupiah(n);
+  const rows=data.rows.map(r=>{
+    const details=r.actuals.length?r.actuals.map(t=>`<div class="actual-note"><b>${esc(formatDateShort(t.date))} — ${money(t.amount)}</b><br>${esc(t.description||'Realisasi pembelian')}<br><span class="muted">Vendor/Toko: ${esc(t.vendor||'-')} | Ref: ${esc(t.ref||'-')}</span>${t.note?`<br><span class="muted">Catatan: ${esc(t.note)}</span>`:''}</div>`).join(''):'<span class="muted">Belum ada realisasi</span>';
+    const rc=r.remaining<0?'negative':(r.remaining===0?'zero':'positive');
+    const vc=r.variance>0?'negative':(r.variance===0?'zero':'positive');
+    return `<tr><td class="no">${r.no}</td><td><b>${esc(r.description)}</b><div class="muted">${esc(r.section)}</div></td><td class="num">${money(r.quote)}</td><td class="num">${money(r.plan)}</td><td class="num"><b>${money(r.actual)}</b></td><td>${details}</td><td class="num ${rc}">${money(r.remaining)}</td><td class="num ${vc}">${r.variance>0?'+':''}${money(r.variance)}</td></tr>`;
+  }).join('');
+  const rc=data.totalRemaining<0?'negative':(data.totalRemaining===0?'zero':'positive');
+  const vc=data.totalVariance>0?'negative':(data.totalVariance===0?'zero':'positive');
+  const report=`<!doctype html><html><head><meta charset="utf-8"><title>Quote vs Aktual</title><style>
+  @page{size:A4 landscape;margin:9mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#173f40;margin:0;font-size:9px}
+  .top{display:flex;justify-content:space-between;border-bottom:2px solid #173f40;padding-bottom:7px;margin-bottom:7px}h1{font-size:18px;margin:0 0 3px}.sub{color:#667;font-size:9px}.meeting{text-align:right;color:#667}
+  table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #cbd7d7;padding:4px 5px;vertical-align:top}th{background:#173f40;color:#fff;text-align:center;font-size:8px}.group{background:#2e6667}
+  .no{width:4%;text-align:center}.desc{width:20%}.num{width:10%;text-align:right;white-space:nowrap}.note{width:27%}.positive{background:#fff3bf;color:#7a5b00;font-weight:bold}.zero{background:#d8f3dc;color:#216e39;font-weight:bold}.negative{background:#ffd8d8;color:#a61b1b;font-weight:bold}
+  .muted{color:#697878;font-size:7.5px;line-height:1.25}.actual-note{border:1px solid #d8dfdf;background:#fafafa;border-radius:4px;padding:3px;margin-bottom:3px;font-size:8px}
+  .total td{font-weight:bold;background:#eef3f3}.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:8px}.box{border:1px solid #cbd7d7;padding:6px;border-radius:4px}.label{font-size:7px;color:#697878;text-transform:uppercase}.value{font-size:10px;font-weight:bold;margin-top:2px}.profit{background:#d8f3dc}.loss{background:#ffd8d8}.footer{margin-top:5px;font-size:7px;color:#697878}
+  </style></head><body>
+  <div class="top"><div><h1>QUOTE VS AKTUAL / REALISASI</h1><div class="sub"><b>Proyek:</b> ${esc(data.proj.name||'-')} &nbsp; <b>Klien:</b> ${esc(data.proj.client||'-')}</div></div><div class="meeting">Monthly Meeting<br>${esc(new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}))}</div></div>
+  <table><thead><tr><th rowspan="2">No.</th><th rowspan="2">Deskripsi Quote / Yang Harus Dibeli</th><th colspan="2" class="group">QUOTE / PLAN</th><th colspan="4" class="group">AKTUAL / REALISASI</th></tr><tr><th>Quote</th><th>Plan</th><th>Aktual</th><th>Keterangan / Nota</th><th>Sisa Budget</th><th>Selisih</th></tr></thead>
+  <tbody>${rows}<tr class="total"><td colspan="2">TOTAL</td><td class="num">${money(data.totalQuote)}</td><td class="num">${money(data.totalQuote)}</td><td class="num">${money(data.totalActual)}</td><td>Total realisasi yang sudah dicatat</td><td class="num ${rc}">${money(data.totalRemaining)}</td><td class="num ${vc}">${data.totalVariance>0?'+':''}${money(data.totalVariance)}</td></tr></tbody></table>
+  <div class="summary"><div class="box"><div class="label">Nilai Quote / Revenue</div><div class="value">${money(data.revenue)}</div></div><div class="box"><div class="label">Actual Project Cost</div><div class="value">${money(data.projectActualCost)}</div></div><div class="box ${data.gross<0?'loss':'profit'}"><div class="label">Gross Profit Actual</div><div class="value">${money(data.gross)}</div></div><div class="box"><div class="label">Tax 4%</div><div class="value">${money(data.tax)}</div></div><div class="box ${data.net<0?'loss':'profit'}"><div class="label">Net Profit After Tax</div><div class="value">${money(data.net)}</div></div></div>
+  <div class="footer">Plan otomatis mengikuti Quote. Keterangan realisasi mengikuti transaksi/nota yang dikaitkan dengan item quote.</div>
+  </body></html>`;
+  const w=window.open('','_blank','width=1200,height=800');
+  if(!w){showToast('Popup diblokir. Izinkan pop-up untuk Buku Nota.');return;}
+  w.document.open();w.document.write(report);w.document.close();w.focus();
+  setTimeout(()=>w.print(),700);
+  showToast('PDF siap. Pada dialog print pilih "Save as PDF".');
 }
-function excelEscape(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
 function exportQuoteActualExcel(){
   try{
     const data=quoteActualReportData(); if(!data){showToast('Pilih proyek dulu.');return;}
@@ -2890,8 +2898,10 @@ function setupAppEvents(){
   document.getElementById('addQuoteItemBtn').addEventListener('click', openAddQuoteItemModal);
   document.getElementById('savePlanBtn').addEventListener('click', handleSavePurchasePlan);
   document.getElementById('exportMonthlyPlanBtn').addEventListener('click', exportMonthlyPlan);
-  document.getElementById('downloadQuoteActualPdfBtn').addEventListener('click', exportQuoteActualPdf);
-  document.getElementById('downloadQuoteActualExcelBtn').addEventListener('click', exportQuoteActualExcel);
+  const qPdfBtn=document.getElementById('downloadQuoteActualPdfBtn');
+  const qXlsBtn=document.getElementById('downloadQuoteActualExcelBtn');
+  if(qPdfBtn) qPdfBtn.addEventListener('click', exportQuoteActualPdf);
+  if(qXlsBtn) qXlsBtn.addEventListener('click', exportQuoteActualExcel);
   document.getElementById('plan-date').value = todayISO();
 
   // inventory
@@ -2914,13 +2924,11 @@ function setupAppEvents(){
 
 // AUTH HARUS DIPASANG TERLEBIH DAHULU.
 // Jika ada error di modul aplikasi lain, tombol Login/Buat akun tetap berfungsi.
-try {
-  initAuth();
-} catch(err) {
+initAuth().catch(err => {
   console.error('Auth initialization error:', err);
   const msg = document.getElementById('authMsg');
   if(msg) msg.textContent = 'Terjadi error saat menyiapkan login. Silakan refresh halaman.';
-}
+});
 
 // Modul aplikasi lain tidak boleh memblokir auth.
 try {
