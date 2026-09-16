@@ -710,8 +710,8 @@
                 <p class="hint" style="margin:0;">Plan otomatis mengikuti nilai Quote. Realisasi diambil dari nota/transaksi yang dikaitkan ke item quote. Sisa budget: <span style="background:#fff3bf;padding:2px 6px;border-radius:4px;">kuning = masih ada</span>, <span style="background:#ffd8d8;padding:2px 6px;border-radius:4px;">merah = over budget</span>, <span style="background:#d8f3dc;padding:2px 6px;border-radius:4px;">hijau = pas / profit positif</span>.</p>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="btn secondary small" id="downloadQuoteActualPdfBtn">📄 Download PDF</button>
-                <button class="btn secondary small" id="downloadQuoteActualExcelBtn">📊 Download Excel</button>
+                <button type="button" class="btn secondary small" id="downloadQuoteActualPdfBtn">📄 Download PDF</button>
+                <button type="button" class="btn secondary small" id="downloadQuoteActualExcelBtn">📊 Download Excel</button>
               </div>
             </div>
             <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);margin-top:14px;">
@@ -1501,135 +1501,96 @@ function downloadBlobFile(blob, filename){
   }catch(e){ console.error(e); return false; }
 }
 
+function asciiSafe(v){
+  return String(v??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E\n\r]/g,'?');
+}
+function pdfEscape(v){ return asciiSafe(v).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)').replace(/[\r\n]+/g,' '); }
+function wrapPdfText(text,maxChars){
+  const words=asciiSafe(text).split(/\s+/), out=[]; let line='';
+  words.forEach(w=>{ if((line+' '+w).trim().length>maxChars && line){out.push(line);line=w;} else line=(line+' '+w).trim(); });
+  if(line)out.push(line); return out.length?out:[''];
+}
+function makeSimplePdf(lines){
+  // Small self-contained PDF writer: no CDN dependency, so PDF download still works if external libraries fail to load.
+  const pageW=842,pageH=595, margin=28, lineH=10, maxLines=53;
+  const pages=[]; let page=[];
+  lines.forEach(line=>{
+    const chunks=wrapPdfText(line.text||'', Math.max(20, Math.floor((line.width||760)/5.1)));
+    chunks.forEach((chunk,i)=>{
+      if(page.length>=maxLines){pages.push(page);page=[];}
+      page.push({text:chunk,bold:!!line.bold,size:line.size||8});
+    });
+  }); if(page.length||!pages.length)pages.push(page);
+  const objects=[]; const add=o=>{objects.push(o);return objects.length;};
+  const fontReg=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  const fontBold=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+  const pageIds=[]; const contentIds=[];
+  pages.forEach(pg=>{
+    let stream='BT\n/F1 8 Tf\n'; let y=pageH-margin;
+    pg.forEach(item=>{
+      stream += `1 0 0 1 ${margin} ${y} Tm /${item.bold?'F2':'F1'} ${item.size} Tf (${pdfEscape(item.text)}) Tj\n`;
+      y-=lineH;
+    }); stream+='ET';
+    const cid=add(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`); contentIds.push(cid);
+    const pid=add(`<< /Type /Page /Parent PAGES /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /Font << /F1 ${fontReg} 0 R /F2 ${fontBold} 0 R >> >> /Contents ${cid} 0 R >>`); pageIds.push(pid);
+  });
+  const kids=pageIds.map(id=>`${id} 0 R`).join(' ');
+  const pagesId=add(`<< /Type /Pages /Kids [${kids}] /Count ${pageIds.length} >>`);
+  // Replace placeholder parent references.
+  pageIds.forEach(id=>{ objects[id-1]=objects[id-1].replace('PAGES',`${pagesId} 0 R`); });
+  const catalogId=add(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+  let pdf='%PDF-1.4\n%âãÏÓ\n', offsets=[0];
+  objects.forEach((obj,i)=>{offsets[i+1]=pdf.length;pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;});
+  const xref=pdf.length; pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`;
+  for(let i=1;i<=objects.length;i++) pdf+=String(offsets[i]).padStart(10,'0')+' 00000 n \n';
+  pdf+=`trailer\n<< /Size ${objects.length+1} /Root ${catalogId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return new Blob([pdf],{type:'application/pdf'});
+}
 function exportQuoteActualPdf(){
   try{
-    const data=quoteActualReportData();
-    if(!data){showToast('Pilih proyek dulu.');return;}
-    if(!window.jspdf || !window.jspdf.jsPDF) throw new Error('Library PDF belum termuat.');
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
-    const pageW=doc.internal.pageSize.getWidth();
-    doc.setFont('helvetica','bold'); doc.setFontSize(15);
-    doc.text('QUOTE VS AKTUAL / REALISASI',14,14);
-    doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    doc.text(`Proyek: ${data.proj.name||'-'}`,14,21);
-    doc.text(`Klien: ${data.proj.client||'-'}`,14,26);
-    doc.text(`Dibuat: ${new Date().toLocaleString('id-ID')}`,pageW-14,14,{align:'right'});
-
-    const body=data.rows.map(r=>{
-      const actualAmount=r.actuals.length ? r.actuals.map(t=>rupiah(t.amount)).join('\n')+`\nTOTAL: ${rupiah(r.actual)}` : 'Rp 0';
-      const notes=r.actuals.length ? r.actuals.map(t=>[
-        formatDateShort(t.date),
-        `Untuk quote: ${r.description}`,
-        `Vendor/Toko: ${t.vendor||'-'}`,
-        `Keterangan: ${t.description||'-'}`,
-        `No. Nota/Ref: ${t.ref||'-'}`,
-        t.note?`Catatan: ${t.note}`:''
-      ].filter(Boolean).join('\n')).join('\n\n') : 'Belum ada realisasi';
-      return [r.no,r.description,r.section,rupiah(r.quote),rupiah(r.plan),actualAmount,notes,rupiah(r.remaining),`${r.variance>0?'+':''}${rupiah(r.variance)}`];
+    const data=quoteActualReportData(); if(!data){showToast('Pilih proyek dulu.');return;}
+    const lines=[];
+    lines.push({text:'QUOTE VS AKTUAL / REALISASI',bold:true,size:14});
+    lines.push({text:`Proyek: ${data.proj.name||'-'}    Klien: ${data.proj.client||'-'}`,size:9});
+    lines.push({text:'',size:5});
+    lines.push({text:'No | DESKRIPSI QUOTE | BAGIAN | QUOTE | PLAN | AKTUAL | SISA | SELISIH',bold:true,size:8});
+    lines.push({text:'-' .repeat(120),size:6});
+    data.rows.forEach(r=>{
+      lines.push({text:`${r.no} | ${r.description} | ${r.section} | ${rupiah(r.quote)} | ${rupiah(r.plan)} | ${rupiah(r.actual)} | ${rupiah(r.remaining)} | ${r.variance>0?'+':''}${rupiah(r.variance)}`,size:7});
+      if(r.actuals.length){
+        r.actuals.forEach(t=>lines.push({text:`   REALISASI: ${formatDateShort(t.date)} | ${rupiah(t.amount)} | Untuk quote: ${r.description} | ${t.vendor||'-'} | ${t.description||'-'} | Nota/Ref: ${t.ref||'-'}`,size:7}));
+      } else lines.push({text:'   REALISASI: belum ada nota / realisasi',size:7});
     });
-    body.push(['','TOTAL','',rupiah(data.totalQuote),rupiah(data.totalQuote),rupiah(data.totalActual),'Seluruh realisasi pada item quote terkait',rupiah(data.totalRemaining),`${data.totalVariance>0?'+':''}${rupiah(data.totalVariance)}`]);
-
-    if(typeof doc.autoTable!=='function') throw new Error('Plugin tabel PDF belum termuat.');
-    doc.autoTable({
-      startY:32,
-      head:[
-        [
-          {content:'No.',rowSpan:2},
-          {content:'Deskripsi Quote / Yang Harus Dibeli',rowSpan:2},
-          {content:'Bagian',rowSpan:2},
-          {content:'QUOTE / PLAN',colSpan:2,styles:{halign:'center'}},
-          {content:'AKTUAL / REALISASI',colSpan:4,styles:{halign:'center'}}
-        ],
-        ['Quote','Plan','Aktual','Keterangan Realisasi','Sisa Budget','Selisih']
-      ],
-      body,
-      styles:{fontSize:6.5,cellPadding:1.8,overflow:'linebreak',valign:'top'},
-      headStyles:{fillColor:[28,75,77],textColor:255,fontStyle:'bold'},
-      columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:48},2:{cellWidth:24},3:{cellWidth:27,halign:'right'},4:{cellWidth:27,halign:'right'},5:{cellWidth:25,halign:'right'},6:{cellWidth:72},7:{cellWidth:27,halign:'right'},8:{cellWidth:27,halign:'right'}},
-      didParseCell:function(hook){
-        if(hook.section==='body' && hook.row.index===body.length-1){hook.cell.styles.fontStyle='bold';hook.cell.styles.fillColor=[232,238,238];}
-        if(hook.section==='body' && (hook.column.index===7||hook.column.index===8) && hook.row.index<body.length-1){
-          const r=data.rows[hook.row.index];
-          const val=hook.column.index===7?r.remaining:r.variance;
-          if(val<0) hook.cell.styles.fillColor=[255,216,216];
-          else if(val===0) hook.cell.styles.fillColor=[216,243,220];
-          else hook.cell.styles.fillColor=[255,243,191];
-        }
-      }, margin:{left:10,right:10}
-    });
-
-    let y=doc.lastAutoTable.finalY+8;
-    if(y>175){doc.addPage();y=16;}
-    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('Ringkasan Profit Proyek',14,y);
-    y+=6;
-    doc.autoTable({startY:y,theme:'grid',head:[['Nilai Quote / Revenue','Actual Project Cost','Gross Profit Actual','Tax 4%','Net Profit After Tax']],body:[[rupiah(data.revenue),rupiah(data.projectActualCost),rupiah(data.gross),rupiah(data.tax),rupiah(data.net)]],styles:{fontSize:9,cellPadding:3,halign:'right'},headStyles:{fillColor:[28,75,77],textColor:255},margin:{left:10,right:10}});
-    doc.save(`${reportFileBase()}.pdf`);
+    lines.push({text:'-' .repeat(120),size:6});
+    lines.push({text:`TOTAL | QUOTE ${rupiah(data.totalQuote)} | PLAN ${rupiah(data.totalQuote)} | AKTUAL ${rupiah(data.totalActual)} | SISA ${rupiah(data.totalRemaining)} | SELISIH ${data.totalVariance>0?'+':''}${rupiah(data.totalVariance)}`,bold:true,size:8});
+    lines.push({text:'',size:6});
+    lines.push({text:'RINGKASAN PROFIT PROYEK',bold:true,size:11});
+    lines.push({text:`Revenue/Quote: ${rupiah(data.revenue)} | Actual Cost: ${rupiah(data.projectActualCost)} | Gross Profit: ${rupiah(data.gross)} | Tax 4%: ${rupiah(data.tax)} | Net Profit: ${rupiah(data.net)}`,size:8});
+    const ok=downloadBlobFile(makeSimplePdf(lines),`${reportFileBase()}.pdf`);
+    if(!ok) throw new Error('Browser menolak proses download PDF.');
     showToast('PDF berhasil diunduh.');
-  }catch(e){ console.error('PDF export error:',e); showToast('PDF gagal dibuat: '+(e.message||'cek Console')); }
+  }catch(e){console.error('PDF export error:',e);showToast('PDF gagal dibuat: '+(e.message||'coba lagi.'));}
 }
-
+function excelEscape(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function exportQuoteActualExcel(){
   try{
-    const data=quoteActualReportData();
-    if(!data){showToast('Pilih proyek dulu.');return;}
-    if(!window.XLSX) throw new Error('Library Excel belum termuat.');
-    const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.aoa_to_sheet([
-      ['QUOTE VS AKTUAL / REALISASI'],
-      [`Proyek: ${data.proj.name||'-'}`],
-      [`Klien: ${data.proj.client||'-'}`],[],
-      ['No.','Deskripsi Quote / Yang Harus Dibeli','Bagian','QUOTE / PLAN','','AKTUAL / REALISASI','','',''],
-      ['','','','Quote','Plan','Aktual','Keterangan Realisasi','Sisa Budget','Selisih']
-    ]);
-    const rowsAoa=data.rows.map(r=>{
-      const notes=r.actuals.length ? r.actuals.map(t=>[
-        formatDateShort(t.date),`Untuk quote: ${r.description}`,`Vendor/Toko: ${t.vendor||'-'}`,`Keterangan: ${t.description||'-'}`,`No. Nota/Ref: ${t.ref||'-'}`,t.note?`Catatan: ${t.note}`:''
-      ].filter(Boolean).join(' | ')).join('\n') : 'Belum ada realisasi';
-      return [r.no,r.description,r.section,r.quote,r.plan,r.actual,notes,r.remaining,r.variance];
+    const data=quoteActualReportData(); if(!data){showToast('Pilih proyek dulu.');return;}
+    const money=v=>Number(v||0).toLocaleString('id-ID');
+    let rows=`<table border="1"><tr><th colspan="9">QUOTE VS AKTUAL / REALISASI</th></tr><tr><th colspan="9">Proyek: ${excelEscape(data.proj.name||'-')} | Klien: ${excelEscape(data.proj.client||'-')}</th></tr>`;
+    rows+=`<tr><th>No.</th><th>Deskripsi Quote / Yang Harus Dibeli</th><th>Bagian</th><th>Quote</th><th>Plan</th><th>Aktual</th><th>Keterangan Realisasi</th><th>Sisa Budget</th><th>Selisih</th></tr>`;
+    data.rows.forEach(r=>{
+      const detail=r.actuals.length?r.actuals.map(t=>`${formatDateShort(t.date)} — ${rupiah(t.amount)} — Untuk quote: ${t.description||r.description} — Vendor/Toko: ${t.vendor||'-'} — ${t.description||'-'} — Nota/Ref: ${t.ref||'-'}${t.note?` — ${t.note}`:''}`).join('<br>'):'Belum ada realisasi';
+      const rc=r.remaining<0?' style="background:#ffd8d8;font-weight:bold"':r.remaining===0?' style="background:#d8f3dc;font-weight:bold"':' style="background:#fff3bf;font-weight:bold"';
+      const vc=r.variance>0?' style="background:#ffd8d8;font-weight:bold"':r.variance===0?' style="background:#d8f3dc;font-weight:bold"':' style="background:#fff3bf;font-weight:bold"';
+      rows+=`<tr><td>${r.no}</td><td>${excelEscape(r.description)}</td><td>${excelEscape(r.section)}</td><td>${money(r.quote)}</td><td>${money(r.plan)}</td><td>${money(r.actual)}</td><td>${detail}</td><td${rc}>${money(r.remaining)}</td><td${vc}>${r.variance>0?'+':''}${money(r.variance)}</td></tr>`;
     });
-    rowsAoa.push(['','','TOTAL',data.totalQuote,data.totalQuote,data.totalActual,'Seluruh realisasi pada item quote terkait',data.totalRemaining,data.totalVariance]);
-    XLSX.utils.sheet_add_aoa(ws,rowsAoa,{origin:'A7'});
-    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}},{s:{r:4,c:0},e:{r:5,c:0}},{s:{r:4,c:1},e:{r:5,c:1}},{s:{r:4,c:2},e:{r:5,c:2}},{s:{r:4,c:3},e:{r:4,c:4}},{s:{r:4,c:5},e:{r:4,c:8}}];
-    ws['!cols']=[{wch:7},{wch:45},{wch:18},{wch:18},{wch:18},{wch:18},{wch:65},{wch:20},{wch:20}];
-    ws['A1'].s={font:{bold:true,sz:16}};
-    ['A5','D5','F5'].forEach(a=>ws[a].s={font:{bold:true,color:'FFFFFF'},fill:{fgColor:{rgb:'1C4B4D'}},alignment:{horizontal:'center',vertical:'center'}});
-    ['A6','B6','C6','D6','E6','F6','G6','H6','I6'].forEach(a=>ws[a].s={font:{bold:true,color:'FFFFFF'},fill:{fgColor:{rgb:'3C6F70'}},alignment:{horizontal:'center',vertical:'center',wrapText:true}});
-    const lastRow=7+rowsAoa.length-1;
-    for(let r=7;r<=lastRow;r++){
-      ['A','B','C','F','G'].forEach(col=>{const c=ws[`${col}${r}`];if(c)c.s={alignment:{vertical:'top',wrapText:true}};});
-      ['D','E','H','I'].forEach(col=>{const c=ws[`${col}${r}`];if(c)c.s={alignment:{horizontal:'right',vertical:'top'},numFmt:'#,##0'};});
-    }
-    data.rows.forEach((item,i)=>{
-      const er=7+i, rem=ws[`H${er}`], vari=ws[`I${er}`];
-      const rc=item.remaining<0?'FFD8D8':(item.remaining===0?'D8F3DC':'FFF3BF');
-      const vc=item.variance>0?'FFD8D8':(item.variance===0?'D8F3DC':'FFF3BF');
-      if(rem)rem.s={fill:{fgColor:{rgb:rc}},font:{bold:true},alignment:{horizontal:'right'},numFmt:'#,##0'};
-      if(vari)vari.s={fill:{fgColor:{rgb:vc}},font:{bold:true},alignment:{horizontal:'right'},numFmt:'#,##0'};
-    });
-    for(let c=0;c<9;c++){const cell=ws[XLSX.utils.encode_cell({r:lastRow-1,c})];if(cell)cell.s={font:{bold:true},fill:{fgColor:{rgb:'E8EEEE'}},alignment:{vertical:'top',wrapText:true}};}
-
-    const ps=lastRow+3;
-    XLSX.utils.sheet_add_aoa(ws,[['RINGKASAN PROFIT PROYEK'],['Nilai Quote / Revenue','Actual Project Cost','Gross Profit Actual','Tax 4%','Net Profit After Tax'],[data.revenue,data.projectActualCost,data.gross,data.tax,data.net]],{origin:`A${ps}`});
-    ws[`A${ps}`].s={font:{bold:true,sz:13}};
-    for(let c=0;c<5;c++){ws[XLSX.utils.encode_cell({r:ps,c})].s={font:{bold:true,color:'FFFFFF'},fill:{fgColor:{rgb:'1C4B4D'}},alignment:{horizontal:'center',wrapText:true}};ws[XLSX.utils.encode_cell({r:ps+1,c})].s={font:{bold:true},alignment:{horizontal:'right'},numFmt:'#,##0'};}
-    const gc=data.gross<0?'FFD8D8':(data.gross===0?'FFF3BF':'D8F3DC'), nc=data.net<0?'FFD8D8':(data.net===0?'FFF3BF':'D8F3DC');
-    ws[`C${ps+2}`].s={fill:{fgColor:{rgb:gc}},font:{bold:true},numFmt:'#,##0',alignment:{horizontal:'right'}};ws[`E${ps+2}`].s={fill:{fgColor:{rgb:nc}},font:{bold:true},numFmt:'#,##0',alignment:{horizontal:'right'}};
-    XLSX.utils.book_append_sheet(wb,ws,'Quote vs Aktual');
-
-    const detail=[];
-    data.rows.forEach(r=>r.actuals.forEach(t=>detail.push({'No Quote':r.no,'Deskripsi Quote':r.description,'Bagian':r.section,'Tanggal':t.date,'Nominal Aktual':Number(t.amount||0),'Vendor / Toko':t.vendor||'','Keterangan':t.description||'','No. Nota / Ref':t.ref||'','Catatan':t.note||''})));
-    const dws=XLSX.utils.json_to_sheet(detail.length?detail:[{'Info':'Belum ada nota / realisasi'}]);
-    dws['!cols']=[{wch:10},{wch:45},{wch:18},{wch:14},{wch:18},{wch:24},{wch:50},{wch:20},{wch:50}];
-    XLSX.utils.book_append_sheet(wb,dws,'Detail Realisasi');
-
-    const filename=`${reportFileBase()}.xlsx`;
-    try{XLSX.writeFile(wb,filename);}catch(e){
-      const arr=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-      if(!downloadBlobFile(new Blob([arr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),filename)) throw e;
-    }
+    rows+=`<tr><th colspan="3">TOTAL</th><th>${money(data.totalQuote)}</th><th>${money(data.totalQuote)}</th><th>${money(data.totalActual)}</th><th>Seluruh realisasi pada item quote terkait</th><th>${money(data.totalRemaining)}</th><th>${data.totalVariance>0?'+':''}${money(data.totalVariance)}</th></tr>`;
+    rows+=`<tr><th colspan="9">RINGKASAN PROFIT PROYEK</th></tr><tr><th>Revenue / Quote</th><th>Actual Project Cost</th><th>Gross Profit Actual</th><th>Tax 4%</th><th>Net Profit After Tax</th></tr><tr><td>${money(data.revenue)}</td><td>${money(data.projectActualCost)}</td><td>${money(data.gross)}</td><td>${money(data.tax)}</td><td>${money(data.net)}</td></tr></table>`;
+    const htmlDoc=`<html><head><meta charset="utf-8"><style>body{font-family:Arial}table{border-collapse:collapse;width:100%}th,td{padding:7px;border:1px solid #aaa;vertical-align:top}th{background:#1c4b4d;color:#fff}td{background:#fff}.num{text-align:right}</style></head><body>${rows}</body></html>`;
+    const ok=downloadBlobFile(new Blob([htmlDoc],{type:'application/vnd.ms-excel;charset=utf-8'}),`${reportFileBase()}.xls`);
+    if(!ok) throw new Error('Browser menolak proses download Excel.');
     showToast('Excel berhasil diunduh.');
-  }catch(e){ console.error('Excel export error:',e); showToast('Excel gagal dibuat: '+(e.message||'cek Console')); }
+  }catch(e){console.error('Excel export error:',e);showToast('Excel gagal dibuat: '+(e.message||'coba lagi.'));}
 }
 
 function exportMonthlyPlan(){ const proj=getActiveProject();if(!proj){showToast('Pilih proyek dulu.');return;} const month=document.getElementById('summary-month').value||new Date().toISOString().slice(0,7),plans=(state.purchasePlans||[]).filter(p=>p.projectId===activeProjectId&&p.date.slice(0,7)===month),actual=getProjectTransactions().filter(t=>t.date.slice(0,7)===month),items=quoteItemsForProject().filter(q=>q.section==='Material'||q.section==='Vendor Fee'),rows=items.map(q=>({Item:q.description,Bagian:q.section,Budget:q.total,Plan:plans.filter(p=>p.quoteItemId===q.id).reduce((a,p)=>a+p.amount,0),Actual:actual.filter(t=>t.quoteItemId===q.id).reduce((a,t)=>a+t.amount,0)})); const revenue=proj.quoteAmount||0,cost=actual.reduce((a,t)=>a+t.amount,0),gross=revenue-cost,tax=Math.max(gross,0)*0.04,net=gross-tax; const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Proyek:proj.name,Klien:proj.client,Periode:formatMonthLabel(month),'Revenue Quote':revenue,'Actual Cost':cost,'Gross Profit':gross,'Tax 4%':tax,'Net Profit':net}]),'Summary');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{Info:'Belum ada budget item'}]),'Plan vs Actual');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(plans.map(p=>{const q=quoteItemsForProject().find(x=>x.id===p.quoteItemId);return {Tanggal:p.date,Item:q?.description||'',Vendor:p.vendor,Plan:p.amount,Catatan:p.note}})),'Plan Bulanan');XLSX.writeFile(wb,`rekapan-proyek-${proj.name.replace(/\s+/g,'-').toLowerCase()}-${month}.xlsx`);showToast('Rekapan bulanan berhasil diunduh.'); }
