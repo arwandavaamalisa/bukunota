@@ -710,8 +710,8 @@
                 <p class="hint" style="margin:0;">Plan otomatis mengikuti nilai Quote. Realisasi diambil dari nota/transaksi yang dikaitkan ke item quote. Sisa budget: <span style="background:#fff3bf;padding:2px 6px;border-radius:4px;">kuning = masih ada</span>, <span style="background:#ffd8d8;padding:2px 6px;border-radius:4px;">merah = over budget</span>, <span style="background:#d8f3dc;padding:2px 6px;border-radius:4px;">hijau = pas / profit positif</span>.</p>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button type="button" class="btn secondary small" id="downloadQuoteActualPdfBtn">📄 Download PDF</button>
-                <button type="button" class="btn secondary small" id="downloadQuoteActualExcelBtn">📊 Download Excel</button>
+                <button type="button" class="btn secondary small" id="downloadQuoteActualPdfBtn" onclick="exportQuoteActualPdf()">📄 Download PDF</button>
+                <button type="button" class="btn secondary small" id="downloadQuoteActualExcelBtn" onclick="exportQuoteActualExcel()">📊 Download Excel</button>
               </div>
             </div>
             <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);margin-top:14px;">
@@ -1580,6 +1580,14 @@ function exportQuoteActualPdf(){
   showToast('PDF siap. Pada dialog print pilih "Save as PDF".');
 }
 
+function excelEscape(value){
+  return String(value ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+}
 function exportQuoteActualExcel(){
   try{
     const data=quoteActualReportData(); if(!data){showToast('Pilih proyek dulu.');return;}
@@ -2655,7 +2663,7 @@ async function startApp(){
   renderAll();
 }
 
-function initAuth(){
+async function initAuth(){
   const emailEl = document.getElementById('auth-email');
   const passwordEl = document.getElementById('auth-password');
   const loginBtn = document.getElementById('passwordLoginBtn');
@@ -2898,10 +2906,8 @@ function setupAppEvents(){
   document.getElementById('addQuoteItemBtn').addEventListener('click', openAddQuoteItemModal);
   document.getElementById('savePlanBtn').addEventListener('click', handleSavePurchasePlan);
   document.getElementById('exportMonthlyPlanBtn').addEventListener('click', exportMonthlyPlan);
-  const qPdfBtn=document.getElementById('downloadQuoteActualPdfBtn');
-  const qXlsBtn=document.getElementById('downloadQuoteActualExcelBtn');
-  if(qPdfBtn) qPdfBtn.addEventListener('click', exportQuoteActualPdf);
-  if(qXlsBtn) qXlsBtn.addEventListener('click', exportQuoteActualExcel);
+  // Download buttons use direct onclick handlers so they remain functional
+  // even if another optional app event fails during setup.
   document.getElementById('plan-date').value = todayISO();
 
   // inventory
