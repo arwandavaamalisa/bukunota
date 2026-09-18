@@ -95,6 +95,21 @@
   .maintenance-filter-btn{border:1px solid rgba(255,255,255,.18);background:transparent;color:#a9c4c1;padding:5px 7px;font-size:10px;border-radius:10px;cursor:pointer;}
   .maintenance-filter-btn:hover{background:rgba(255,255,255,.06);color:#fff;}
   .maintenance-filter-btn.active{background:rgba(255,255,255,.12);color:#fff;border-color:var(--sand);}
+.maintenance-status-section{margin-top:4px;}
+.maintenance-status-title{display:flex;justify-content:space-between;align-items:center;padding:5px 10px;color:#a9c4c1;font-size:10px;letter-spacing:.05em;}
+.maintenance-status-title .left{display:flex;align-items:center;gap:6px;}
+.maintenance-list{list-style:none;margin:0 0 5px;padding:0;}
+.maintenance-item{display:flex;align-items:center;gap:6px;padding:8px 10px 8px 18px;color:#eae5d8;cursor:pointer;border-left:2px solid transparent;min-width:0;}
+.maintenance-item:hover{background:rgba(255,255,255,.05);}
+.maintenance-item.active{background:rgba(255,255,255,.10);border-left-color:var(--sand);}
+.maintenance-item-main{min-width:0;flex:1;}
+.maintenance-item-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;}
+.maintenance-item-date{display:block;color:#8fb0ac;font-size:9px;margin-top:2px;}
+.maintenance-item .del-btn{margin-left:auto;opacity:.55;}
+.maintenance-item .del-btn:hover{opacity:1;}
+.maintenance-add{display:block;width:calc(100% - 20px);margin:6px 10px 12px;padding:8px 10px;background:transparent;border:1px dashed rgba(255,255,255,.25);color:#eae5d8;text-align:left;cursor:pointer;font-size:11px;}
+.maintenance-add:hover{background:rgba(255,255,255,.05);}
+
   .status-select-row{display:flex;gap:8px;align-items:center;}
   .badge.ongoing{background:#fbeed8;color:#8a612b;}
   .badge.complete{background:#e2ede4;color:var(--ok);}
@@ -404,11 +419,24 @@
     <div class="side-nav" id="sideNav">
       <div class="maintenance-nav-group">
         <button class="side-nav-btn active" data-nav="maintenance">🔧 Maintenance</button>
-        <div class="maintenance-filter" id="maintenanceNavFilter">
-          <button class="maintenance-filter-btn active" data-mnt-filter="">Semua</button>
-          <button class="maintenance-filter-btn" data-mnt-filter="Ongoing">Ongoing</button>
-          <button class="maintenance-filter-btn" data-mnt-filter="Complete">Complete</button>
+
+        <div class="maintenance-status-section">
+          <div class="maintenance-status-title">
+            <span class="left"><span style="color:#f3c84b;">●</span> ONGOING</span>
+            <span class="status-count" id="ongoingMaintenanceCount">0</span>
+          </div>
+          <ul class="maintenance-list" id="maintenanceListOngoing"></ul>
         </div>
+
+        <div class="maintenance-status-section">
+          <div class="maintenance-status-title">
+            <span class="left"><span style="color:#55d88a;">●</span> COMPLETE</span>
+            <span class="status-count" id="completeMaintenanceCount">0</span>
+          </div>
+          <ul class="maintenance-list" id="maintenanceListComplete"></ul>
+        </div>
+
+        <button class="maintenance-add" id="addMaintenanceBtn">+ Tambah maintenance</button>
       </div>
       <button class="side-nav-btn" data-nav="pengeluaran">💸 Expenses General</button>
       <button class="side-nav-btn" data-nav="pettycash">💰 Petty Cash General</button>
@@ -1104,6 +1132,7 @@ let state = {
   pettyCash: [], inventoryItems: [], inventoryMovements: [], quoteItems: [], purchasePlans: []
 };
 let activeProjectId = null;
+let activeMaintenanceId = null;
 let currentSection = 'maintenance';
 let maintenanceStatusFilter = '';
 let editingTxId = null;
@@ -1238,6 +1267,66 @@ function getProjectPayments(){ return state.projectPayments.filter(x=>x.projectI
 
 // ===================== RENDER: SHELL =====================
 
+function renderMaintenanceSidebar(){
+  const ongoing=document.getElementById('maintenanceListOngoing');
+  const complete=document.getElementById('maintenanceListComplete');
+  if(!ongoing||!complete) return;
+  ongoing.innerHTML='';
+  complete.innerHTML='';
+
+  const makeItem=m=>{
+    const li=document.createElement('li');
+    li.className='maintenance-item'+(m.id===activeMaintenanceId?' active':'');
+    li.dataset.maintenance=m.id;
+    const statusClass=m.status==='Complete'?'complete':'ongoing';
+    li.innerHTML=`
+      <span class="project-status-dot ${statusClass}"></span>
+      <span class="maintenance-item-main">
+        <span class="maintenance-item-name">${escapeHtml(m.customer||'Maintenance')}</span>
+        <span class="maintenance-item-date">${formatDateShort(m.date)}</span>
+      </span>
+      <span class="project-status-badge ${statusClass}">${escapeHtml(m.status||'Ongoing')}</span>
+      <button class="del-btn" title="Hapus maintenance">✕</button>
+    `;
+
+    li.querySelector('.maintenance-item-main').addEventListener('click',()=>{
+      activeMaintenanceId=m.id;
+      activatePanel('maintenance');
+      startEditMaintenance(m);
+      renderMaintenanceSidebar();
+    });
+
+    li.querySelector('.project-status-dot').addEventListener('click',()=>{
+      activeMaintenanceId=m.id;
+      activatePanel('maintenance');
+      startEditMaintenance(m);
+      renderMaintenanceSidebar();
+    });
+
+    li.querySelector('.project-status-badge').addEventListener('click',()=>{
+      activeMaintenanceId=m.id;
+      activatePanel('maintenance');
+      startEditMaintenance(m);
+      renderMaintenanceSidebar();
+    });
+
+    li.querySelector('.del-btn').addEventListener('click',e=>{
+      e.stopPropagation();
+      deleteMaintenance(m);
+    });
+    return li;
+  };
+
+  const ongoingItems=state.maintenance.filter(m=>m.status!=='Complete').sort((a,b)=>b.date.localeCompare(a.date));
+  const completeItems=state.maintenance.filter(m=>m.status==='Complete').sort((a,b)=>b.date.localeCompare(a.date));
+
+  ongoingItems.forEach(m=>ongoing.appendChild(makeItem(m)));
+  completeItems.forEach(m=>complete.appendChild(makeItem(m)));
+
+  document.getElementById('ongoingMaintenanceCount').textContent=ongoingItems.length;
+  document.getElementById('completeMaintenanceCount').textContent=completeItems.length;
+}
+
 function renderProjectList(){
   const ongoing=document.getElementById('projectListOngoing');
   const complete=document.getElementById('projectListComplete');
@@ -1274,7 +1363,6 @@ function activatePanel(panel){
   if(target) target.classList.add('active');
   document.querySelectorAll('.side-nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.nav===panel));
   document.querySelectorAll('.project-item').forEach(li=>li.classList.toggle('active', panel==='ringkasan' && li.dataset.project===activeProjectId));
-  document.querySelectorAll('.maintenance-filter-btn').forEach(b=>b.classList.toggle('active', b.dataset.mntFilter===maintenanceStatusFilter));
   renderTitleBlock();
   if(panel==='maintenance') renderMaintenance();
 }
@@ -1313,6 +1401,7 @@ function setupTabs(){
 }
 
 function renderAll(){
+  renderMaintenanceSidebar();
   renderProjectList();
   renderTitleBlock();
   renderTxTable();
@@ -2257,6 +2346,7 @@ function renderMaintenance(){
 
 function resetMaintenanceForm(){
   window.editingMaintenanceId=null;
+  activeMaintenanceId=null;
   document.getElementById('mnt-date').value=todayISO();
   document.getElementById('mnt-customer').value='';
   document.getElementById('mnt-status').value='Ongoing';
@@ -2274,6 +2364,7 @@ function resetMaintenanceForm(){
 
 function startEditMaintenance(m){
   window.editingMaintenanceId=m.id;
+  activeMaintenanceId=m.id;
   document.getElementById('mnt-date').value=m.date;
   document.getElementById('mnt-customer').value=m.customer;
   document.getElementById('mnt-status').value=m.status||'Ongoing';
@@ -2319,6 +2410,7 @@ async function handleSaveMaintenance(){
     if(gid){ row.project_id=gid; if(maintenanceId) ({error}=await sb.from('transactions').update(row).eq('id',maintenanceId)); else {const ins=await sb.from('transactions').insert(row).select().single();error=ins.error;if(!error)maintenanceId=ins.data.id;}} 
   }
   if(error){console.error(error);showToast('Gagal menyimpan maintenance.');return;}
+  activeMaintenanceId=maintenanceId;
 
   // Simpan biaya vendor juga ke Expenses General agar pembayaran vendor masuk ke pengeluaran umum.
   const vendorMarker=`MAINTENANCE:${maintenanceId}`;
@@ -2897,11 +2989,13 @@ async function initAuth(){
 }
 function setupAppEvents(){
   setupTabs();
-  document.querySelectorAll('.maintenance-filter-btn').forEach(btn=>btn.addEventListener('click',()=>{
-    maintenanceStatusFilter=btn.dataset.mntFilter||'';
+  document.getElementById('addMaintenanceBtn').addEventListener('click',()=>{
+    activeMaintenanceId=null;
+    resetMaintenanceForm();
     activatePanel('maintenance');
-    renderMaintenance();
-  }));
+    renderMaintenanceSidebar();
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
   document.getElementById('addProjectBtn').addEventListener('click', openAddProjectModal);
 
   // transaksi
