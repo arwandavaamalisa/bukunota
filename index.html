@@ -81,6 +81,24 @@
   .side-nav-btn:hover{background:rgba(255,255,255,0.06);}
   .side-nav-btn.active{background:rgba(255,255,255,0.1);border-left:2px solid var(--sand);color:#fff;font-weight:600;}
   .project-section-label{font-size:11px;color:#9fc0bd;margin:8px 0 8px;}
+  .status-group{margin:0 0 12px;}
+  .status-group-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;color:#9fc0bd;margin:10px 0 6px;text-transform:uppercase;letter-spacing:.35px;}
+  .status-count{font-size:9px;background:rgba(255,255,255,.08);padding:2px 6px;border-radius:8px;color:#cfe0dd;}
+  .project-status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px;}
+  .project-status-dot.ongoing{background:#e7c290;}
+  .project-status-dot.complete{background:#8fc49b;}
+  .project-status-badge{font-size:9px;padding:2px 6px;border-radius:8px;white-space:nowrap;font-weight:600;}
+  .project-status-badge.ongoing{background:rgba(231,194,144,.18);color:#f0cf9f;}
+  .project-status-badge.complete{background:rgba(143,196,155,.18);color:#b9e0c0;}
+  .maintenance-nav-group{margin:0 0 18px;}
+  .maintenance-filter{display:flex;gap:5px;padding:0 10px 4px;flex-wrap:wrap;}
+  .maintenance-filter-btn{border:1px solid rgba(255,255,255,.18);background:transparent;color:#a9c4c1;padding:5px 7px;font-size:10px;border-radius:10px;cursor:pointer;}
+  .maintenance-filter-btn:hover{background:rgba(255,255,255,.06);color:#fff;}
+  .maintenance-filter-btn.active{background:rgba(255,255,255,.12);color:#fff;border-color:var(--sand);}
+  .status-select-row{display:flex;gap:8px;align-items:center;}
+  .badge.ongoing{background:#fbeed8;color:#8a612b;}
+  .badge.complete{background:#e2ede4;color:var(--ok);}
+
   .maintenance-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
   @media(max-width:900px){.maintenance-kpi{grid-template-columns:repeat(2,1fr);}}
   @media(max-width:520px){.maintenance-kpi{grid-template-columns:1fr;}}
@@ -384,13 +402,27 @@
       <p class="brand-sub">Keuangan & transaksi proyek</p>
     </div>
     <div class="side-nav" id="sideNav">
-      <button class="side-nav-btn active" data-nav="ringkasan">📊 Dashboard Maintenance</button>
+      <div class="maintenance-nav-group">
+        <button class="side-nav-btn active" data-nav="maintenance">🔧 Maintenance</button>
+        <div class="maintenance-filter" id="maintenanceNavFilter">
+          <button class="maintenance-filter-btn active" data-mnt-filter="">Semua</button>
+          <button class="maintenance-filter-btn" data-mnt-filter="Ongoing">Ongoing</button>
+          <button class="maintenance-filter-btn" data-mnt-filter="Complete">Complete</button>
+        </div>
+      </div>
       <button class="side-nav-btn" data-nav="pengeluaran">💸 Expenses General</button>
       <button class="side-nav-btn" data-nav="pettycash">💰 Petty Cash General</button>
       <button class="side-nav-btn" data-nav="inventory">📦 Inventory General</button>
     </div>
     <p class="project-section-label">PROYEK</p>
-    <ul class="project-list" id="projectList"></ul>
+    <div class="status-group">
+      <div class="status-group-title"><span>🟡 ONGOING</span><span class="status-count" id="ongoingProjectCount">0</span></div>
+      <ul class="project-list" id="projectListOngoing"></ul>
+    </div>
+    <div class="status-group">
+      <div class="status-group-title"><span>🟢 COMPLETE</span><span class="status-count" id="completeProjectCount">0</span></div>
+      <ul class="project-list" id="projectListComplete"></ul>
+    </div>
     <button class="add-project" id="addProjectBtn">+ Tambah proyek</button>
     <div class="sidebar-foot">
       <div id="totalProjectsFoot">0 proyek tersimpan</div>
@@ -801,6 +833,7 @@
           <div class="form-grid">
             <div><label for="mnt-date">Tanggal</label><input type="date" id="mnt-date"></div>
             <div><label for="mnt-customer">Customer</label><input type="text" id="mnt-customer" placeholder="mis. Villa ABC"></div>
+            <div><label for="mnt-status">Status Maintenance</label><select id="mnt-status"><option>Ongoing</option><option>Complete</option></select></div>
             <div><label for="mnt-service">Jasa Maintenance (Rp)</label><input type="number" id="mnt-service" min="0" placeholder="mis. 500000"></div>
             <div><label for="mnt-chemical">Chemical ke Customer / Harga Jual (Rp)</label><input type="number" id="mnt-chemical" min="0" placeholder="mis. 750000"></div>
             <div><label for="mnt-vendor-cost">Harga Chemical Vendor (Rp)</label><input type="number" id="mnt-vendor-cost" min="0" placeholder="mis. 500000"></div>
@@ -830,7 +863,7 @@
           </div>
           <div style="overflow-x:auto;">
             <table>
-              <thead><tr><th>Tanggal</th><th>Customer</th><th>Jasa</th><th>Chemical Jual</th><th>Vendor</th><th class="amount">Bayar Vendor</th><th class="amount">Tagihan</th><th class="amount">Profit</th><th>Status</th><th></th></tr></thead>
+              <thead><tr><th>Tanggal</th><th>Customer</th><th>Jasa</th><th>Chemical Jual</th><th>Vendor</th><th class="amount">Bayar Vendor</th><th class="amount">Tagihan</th><th class="amount">Profit</th><th>Status Maintenance</th><th></th></tr></thead>
               <tbody id="maintenanceTableBody"></tbody>
             </table>
           </div>
@@ -1072,6 +1105,7 @@ let state = {
 };
 let activeProjectId = null;
 let currentSection = 'maintenance';
+let maintenanceStatusFilter = '';
 let editingTxId = null;
 let editingExpId = null;
 let editingPcId = null;
@@ -1149,7 +1183,7 @@ async function loadData(){
   // inside the existing `transactions` table, so no SQL migration is required.
   state.maintenance = state.transactions.filter(t=>t.vendor==='__MAINTENANCE__').map(t=>{
     let d={}; try{ d=JSON.parse(t.note||'{}'); }catch(e){}
-    return { id:t.id, date:t.date, customer:d.customer||t.description||'', service:Number(d.service||0), chemicalSell:Number(d.chemicalSell||0), vendorCost:Number(d.vendorCost||0), laborCost:Number(d.laborCost||0), vendor:d.vendorName||'', customerStatus:t.status||'Lunas', vendorStatus:d.vendorStatus||'Lunas', note:d.note||'', raw:t };
+    return { id:t.id, date:t.date, customer:d.customer||t.description||'', status:d.status||'Ongoing', service:Number(d.service||0), chemicalSell:Number(d.chemicalSell||0), vendorCost:Number(d.vendorCost||0), laborCost:Number(d.laborCost||0), vendor:d.vendorName||'', customerStatus:t.status||'Lunas', vendorStatus:d.vendorStatus||'Lunas', note:d.note||'', raw:t };
   });
 
   state.projectPayments = state.transactions.filter(t=>t.vendor==='__PAYMENT__').map(t=>{
@@ -1164,7 +1198,7 @@ async function loadData(){
     method:x.method||'Transfer', reference:x.reference||'', note:x.note||'', source:'legacy'
   }));
 
-  state.projects = (projects||[]).filter(p=>p.name!=='__GENERAL__').map(p=>({ id:p.id, name:p.name, client:p.client||'', location:p.location||'', quoteAmount:Number(p.quote_amount||0), createdAt:p.created_at }));
+  state.projects = (projects||[]).filter(p=>p.name!=='__GENERAL__').map(p=>({ id:p.id, name:p.name, client:p.client||'', location:p.location||'', quoteAmount:Number(p.quote_amount||0), status:(p.status||'Ongoing')==='Complete'?'Complete':'Ongoing', createdAt:p.created_at }));
   state.projects.forEach(p=>{
     const quotes=state.transactions.filter(t=>t.projectId===p.id && t.vendor==='__QUOTE__');
     if(quotes.length) p.quoteAmount=quotes.slice().sort((a,b)=>b.date.localeCompare(a.date))[0].amount;
@@ -1205,18 +1239,26 @@ function getProjectPayments(){ return state.projectPayments.filter(x=>x.projectI
 // ===================== RENDER: SHELL =====================
 
 function renderProjectList(){
-  const list = document.getElementById('projectList');
-  list.innerHTML = '';
-  state.projects.forEach(p=>{
-    const li = document.createElement('li');
-    li.className = 'project-item' + (p.id===activeProjectId && currentSection==='ringkasan' ? ' active':'');
+  const ongoing=document.getElementById('projectListOngoing');
+  const complete=document.getElementById('projectListComplete');
+  if(!ongoing||!complete) return;
+  ongoing.innerHTML=''; complete.innerHTML='';
+  const makeItem=p=>{
+    const li=document.createElement('li');
+    li.className='project-item'+(p.id===activeProjectId && currentSection==='ringkasan'?' active':'');
     li.dataset.project=p.id;
-    li.innerHTML = `<span>${escapeHtml(p.name)}</span><button class="del-btn" title="Hapus proyek">✕</button>`;
-    li.querySelector('span').addEventListener('click', ()=>{ activeProjectId = p.id; activatePanel('ringkasan'); renderAll(); });
-    li.querySelector('.del-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openConfirmDeleteProject(p); });
-    list.appendChild(li);
-  });
-  document.getElementById('totalProjectsFoot').textContent = state.projects.length + ' proyek tersimpan';
+    li.innerHTML=`<span style="display:flex;align-items:center;min-width:0;flex:1;"><span class="project-status-dot ${p.status==='Complete'?'complete':'ongoing'}"></span><span style="overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.name)}</span></span><span class="project-status-badge ${p.status==='Complete'?'complete':'ongoing'}">${p.status}</span><button class="del-btn" title="Hapus proyek">✕</button>`;
+    li.querySelector('span[style*="display:flex"]').addEventListener('click',()=>{activeProjectId=p.id;activatePanel('ringkasan');renderAll();});
+    li.querySelector('.del-btn').addEventListener('click',(e)=>{e.stopPropagation();openConfirmDeleteProject(p);});
+    return li;
+  };
+  const ongoingProjects=state.projects.filter(p=>p.status!=='Complete');
+  const completeProjects=state.projects.filter(p=>p.status==='Complete');
+  ongoingProjects.forEach(p=>ongoing.appendChild(makeItem(p)));
+  completeProjects.forEach(p=>complete.appendChild(makeItem(p)));
+  document.getElementById('ongoingProjectCount').textContent=ongoingProjects.length;
+  document.getElementById('completeProjectCount').textContent=completeProjects.length;
+  document.getElementById('totalProjectsFoot').textContent=state.projects.length+' proyek tersimpan';
 
   const mvSel=document.getElementById('mv-project');
   if(mvSel){
@@ -1225,7 +1267,6 @@ function renderProjectList(){
     if(state.projects.some(p=>p.id===current)) mvSel.value=current;
   }
 }
-
 function activatePanel(panel){
   currentSection = panel;
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
@@ -1233,7 +1274,9 @@ function activatePanel(panel){
   if(target) target.classList.add('active');
   document.querySelectorAll('.side-nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.nav===panel));
   document.querySelectorAll('.project-item').forEach(li=>li.classList.toggle('active', panel==='ringkasan' && li.dataset.project===activeProjectId));
+  document.querySelectorAll('.maintenance-filter-btn').forEach(b=>b.classList.toggle('active', b.dataset.mntFilter===maintenanceStatusFilter));
   renderTitleBlock();
+  if(panel==='maintenance') renderMaintenance();
 }
 
 function renderTitleBlock(){
@@ -1247,6 +1290,7 @@ function renderTitleBlock(){
       if(proj.client) bits.push(`<span>Klien: <b>${escapeHtml(proj.client)}</b></span>`);
       bits.push(`<span>Quote: <b>${rupiah(proj.quoteAmount||0)}</b></span>`);
       if(proj.location) bits.push(`<span>Lokasi: <b>${escapeHtml(proj.location)}</b></span>`);
+      bits.push(`<span>Status: <b>${escapeHtml(proj.status||'Ongoing')}</b></span>`);
     }
   }else if(currentSection==='input') title=proj ? 'Biaya Proyek — '+proj.name : 'Biaya Proyek';
   else if(currentSection==='maintenance') title='Maintenance Dashboard';
@@ -1622,6 +1666,7 @@ function openAddProjectModal(){
         <div><label>Nama proyek</label><input type="text" id="np-name" placeholder="mis. Villa Kayu Putih - Kolam Renang"></div>
         <div><label>Klien (opsional)</label><input type="text" id="np-client" placeholder="mis. Pak Dody"></div>
         <div><label>Lokasi (opsional)</label><input type="text" id="np-location" placeholder="mis. Padang Sambian, Denpasar"></div>
+        <div><label>Status proyek</label><select id="np-status"><option>Ongoing</option><option>Complete</option></select></div>
         <div><label>Nilai Quote / Kontrak (Rp)</label><input type="number" id="np-quote" placeholder="mis. 50000000" min="0"></div>
       </div>
     `,
@@ -1632,7 +1677,8 @@ function openAddProjectModal(){
       const { data, error } = await sb.from('projects').insert({
         user_id: currentUser.id, name,
         client: document.getElementById('np-client').value.trim(),
-        location: document.getElementById('np-location').value.trim()
+        location: document.getElementById('np-location').value.trim(),
+        status: document.getElementById('np-status').value
       }).select().single();
       if(error){ console.error(error); showToast('Gagal menambah proyek.'); return false; }
       activeProjectId = data.id;
@@ -1654,12 +1700,13 @@ function openEditProjectQuoteModal(){
       <div><label>Nama proyek</label><input type="text" id="ep-name" value="${escapeHtml(proj.name)}"></div>
       <div><label>Klien</label><input type="text" id="ep-client" value="${escapeHtml(proj.client||'')}"></div>
       <div><label>Lokasi</label><input type="text" id="ep-location" value="${escapeHtml(proj.location||'')}"></div>
+      <div><label>Status proyek</label><select id="ep-status"><option ${proj.status==='Ongoing'?'selected':''}>Ongoing</option><option ${proj.status==='Complete'?'selected':''}>Complete</option></select></div>
       <div><label>Nilai Quote / Kontrak (Rp)</label><input type="number" id="ep-quote" min="0" value="${proj.quoteAmount||0}"></div>
     </div>`,onSubmit:async()=>{
       const name=document.getElementById('ep-name').value.trim();
       if(!name){showToast('Nama proyek wajib diisi.');return false;}
       const quote=parseFloat(document.getElementById('ep-quote').value)||0;
-      const {error}=await sb.from('projects').update({name,client:document.getElementById('ep-client').value.trim(),location:document.getElementById('ep-location').value.trim(),quote_amount:quote}).eq('id',proj.id);
+      const {error}=await sb.from('projects').update({name,client:document.getElementById('ep-client').value.trim(),location:document.getElementById('ep-location').value.trim(),quote_amount:quote,status:document.getElementById('ep-status').value}).eq('id',proj.id);
       if(error){console.error(error);showToast('Gagal memperbarui proyek.');return false;}
       const existing=state.transactions.filter(t=>t.projectId===proj.id && t.vendor==='__QUOTE__').sort((a,b)=>b.date.localeCompare(a.date));
       if(existing.length){
@@ -2151,10 +2198,11 @@ function openDownloadModal(){
 
 function getMaintenanceFiltered(){
   const month=document.getElementById('mntfilter-month').value;
-  const status=document.getElementById('mntfilter-status').value;
+  const paymentStatus=document.getElementById('mntfilter-status').value;
   return state.maintenance.filter(m=>{
+    if(maintenanceStatusFilter && m.status!==maintenanceStatusFilter) return false;
     if(month && m.date.slice(0,7)!==month) return false;
-    if(status && m.customerStatus!==status) return false;
+    if(paymentStatus && m.customerStatus!==paymentStatus) return false;
     return true;
   }).sort((a,b)=>b.date.localeCompare(a.date));
 }
@@ -2199,7 +2247,8 @@ function renderMaintenance(){
     const total=m.service+m.chemicalSell, p=total-m.vendorCost-m.laborCost;
     const tr=document.createElement('tr');
     const bc=m.customerStatus==='Lunas'?'lunas':(m.customerStatus==='DP'?'dp':'belum');
-    tr.innerHTML=`<td>${formatDateShort(m.date)}</td><td>${escapeHtml(m.customer)}</td><td class="amount">${rupiah(m.service)}</td><td class="amount">${rupiah(m.chemicalSell)}</td><td>${escapeHtml(m.vendor||'-')}</td><td class="amount">${rupiah(m.vendorCost)}</td><td class="amount">${rupiah(total)}</td><td class="amount ${p<0?'diff-neg':'diff-pos'}">${rupiah(p)}</td><td><span class="badge ${bc}">${escapeHtml(m.customerStatus)}</span></td><td class="row-actions"><button class="icon-btn" data-a="edit" title="Edit">✎</button><button class="icon-btn" data-a="del" title="Hapus">✕</button></td>`;
+    const sc=m.status==='Complete'?'complete':'ongoing';
+    tr.innerHTML=`<td>${formatDateShort(m.date)}</td><td>${escapeHtml(m.customer)}</td><td class="amount">${rupiah(m.service)}</td><td class="amount">${rupiah(m.chemicalSell)}</td><td>${escapeHtml(m.vendor||'-')}</td><td class="amount">${rupiah(m.vendorCost)}</td><td class="amount">${rupiah(total)}</td><td class="amount ${p<0?'diff-neg':'diff-pos'}">${rupiah(p)}</td><td><span class="badge ${sc}">${escapeHtml(m.status)}</span></td><td class="row-actions"><button class="icon-btn" data-a="edit" title="Edit">✎</button><button class="icon-btn" data-a="del" title="Hapus">✕</button></td>`;
     tr.querySelector('[data-a="edit"]').addEventListener('click',()=>startEditMaintenance(m));
     tr.querySelector('[data-a="del"]').addEventListener('click',()=>deleteMaintenance(m));
     body.appendChild(tr);
@@ -2210,6 +2259,7 @@ function resetMaintenanceForm(){
   window.editingMaintenanceId=null;
   document.getElementById('mnt-date').value=todayISO();
   document.getElementById('mnt-customer').value='';
+  document.getElementById('mnt-status').value='Ongoing';
   document.getElementById('mnt-service').value='';
   document.getElementById('mnt-chemical').value='';
   document.getElementById('mnt-vendor-cost').value='';
@@ -2226,6 +2276,7 @@ function startEditMaintenance(m){
   window.editingMaintenanceId=m.id;
   document.getElementById('mnt-date').value=m.date;
   document.getElementById('mnt-customer').value=m.customer;
+  document.getElementById('mnt-status').value=m.status||'Ongoing';
   document.getElementById('mnt-service').value=m.service;
   document.getElementById('mnt-chemical').value=m.chemicalSell;
   document.getElementById('mnt-vendor-cost').value=m.vendorCost;
@@ -2252,8 +2303,9 @@ async function handleSaveMaintenance(){
   if(vendorCost<0){showToast('Biaya vendor tidak valid.');return;}
   const customerStatus=document.getElementById('mnt-payment').value;
   const vendorStatus=document.getElementById('mnt-vendor-payment').value;
+  const maintenanceStatus=document.getElementById('mnt-status').value;
   const noteText=document.getElementById('mnt-note').value.trim();
-  const noteObj={customer,service,chemicalSell,vendorCost,laborCost,vendorName,vendorStatus,note:noteText};
+  const noteObj={customer,status:maintenanceStatus,service,chemicalSell,vendorCost,laborCost,vendorName,vendorStatus,note:noteText};
   const row={user_id:currentUser.id,project_id:null,date,category:'__MAINTENANCE__',vendor:'__MAINTENANCE__',amount:service+chemicalSell,description:customer,status:customerStatus,ref:'MAINTENANCE',note:JSON.stringify(noteObj)};
   let error, maintenanceId=window.editingMaintenanceId||null;
   if(maintenanceId){
@@ -2835,6 +2887,7 @@ async function initAuth(){
       currentUser = null;
       state = { projects:[], transactions:[], expenses:[], projectPayments:[], maintenance:[], pettyCash:[], inventoryItems:[], inventoryMovements:[], quoteItems:[], purchasePlans:[] };
       activeProjectId = null;
+      maintenanceStatusFilter = '';
       document.getElementById('appRoot').style.display = 'none';
       document.getElementById('authGate').style.display = 'flex';
       if(msg) msg.textContent = '';
@@ -2844,6 +2897,11 @@ async function initAuth(){
 }
 function setupAppEvents(){
   setupTabs();
+  document.querySelectorAll('.maintenance-filter-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    maintenanceStatusFilter=btn.dataset.mntFilter||'';
+    activatePanel('maintenance');
+    renderMaintenance();
+  }));
   document.getElementById('addProjectBtn').addEventListener('click', openAddProjectModal);
 
   // transaksi
@@ -2886,6 +2944,7 @@ function setupAppEvents(){
   document.getElementById('cancelMaintenanceEditBtn').addEventListener('click',resetMaintenanceForm);
   document.getElementById('mntfilter-month').addEventListener('change',renderMaintenance);
   document.getElementById('mntfilter-status').addEventListener('change',renderMaintenance);
+  document.getElementById('mnt-status').addEventListener('change',updateMaintenanceCalc);
   document.getElementById('mntClearFilterBtn').addEventListener('click',()=>{document.getElementById('mntfilter-month').value='';document.getElementById('mntfilter-status').value='';renderMaintenance();});
 
   // petty cash
