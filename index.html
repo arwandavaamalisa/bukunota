@@ -102,6 +102,11 @@
 .maintenance-item{display:flex;align-items:center;gap:6px;padding:8px 10px 8px 18px;color:#eae5d8;cursor:pointer;border-left:2px solid transparent;min-width:0;}
 .maintenance-item:hover{background:rgba(255,255,255,.05);}
 .maintenance-item.active{background:rgba(255,255,255,.10);border-left-color:var(--sand);}
+.maintenance-item.active{font-weight:500;}
+.maintenance-item .project-status-dot{flex-shrink:0;}
+.maintenance-item-main{cursor:pointer;}
+.maintenance-item .project-status-badge{cursor:pointer;}
+
 .maintenance-item-main{min-width:0;flex:1;}
 .maintenance-item-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;}
 .maintenance-item-date{display:block;color:#8fb0ac;font-size:9px;margin-top:2px;}
@@ -856,8 +861,8 @@
         </div>
 
         <div class="card">
-          <h2>Catat Maintenance</h2>
-          <p class="hint">Customer membayar jasa maintenance + chemical yang sudah di-mark-up. Vendor dibayar untuk chemical. Profit = tagihan customer − biaya vendor chemical.</p>
+          <h2 id="mntFormTitle">Catat Maintenance</h2>
+          <p class="hint">Maintenance dikelola per client dan dicatat bulanan. Pilih client di sidebar kiri untuk melihat seluruh riwayat bulanannya. Profit = tagihan customer − biaya vendor chemical − biaya teknisi.</p>
           <div class="form-grid">
             <div><label for="mnt-date">Tanggal</label><input type="date" id="mnt-date"></div>
             <div><label for="mnt-customer">Customer</label><input type="text" id="mnt-customer" placeholder="mis. Villa ABC"></div>
@@ -884,6 +889,9 @@
         </div>
 
         <div class="card">
+          <div id="mntClientContext" class="upload-preview" style="margin-bottom:12px;">
+            <strong>Semua client</strong> — pilih client dari sidebar kiri untuk melihat riwayat maintenance per client.
+          </div>
           <div class="filters">
             <div class="field"><label for="mntfilter-month">Bulan</label><input type="month" id="mntfilter-month"></div>
             <div class="field"><label for="mntfilter-status">Status Customer</label><select id="mntfilter-status"><option value="">Semua status</option><option>Lunas</option><option>Belum Lunas</option><option>DP</option></select></div>
@@ -1133,6 +1141,7 @@ let state = {
 };
 let activeProjectId = null;
 let activeMaintenanceId = null;
+let activeMaintenanceCustomer = null;
 let currentSection = 'maintenance';
 let maintenanceStatusFilter = '';
 let editingTxId = null;
@@ -1274,57 +1283,51 @@ function renderMaintenanceSidebar(){
   ongoing.innerHTML='';
   complete.innerHTML='';
 
-  const makeItem=m=>{
-    const li=document.createElement('li');
-    li.className='maintenance-item'+(m.id===activeMaintenanceId?' active':'');
-    li.dataset.maintenance=m.id;
+  // Maintenance is monthly, so the sidebar represents CLIENTS, not individual visits.
+  // Each client appears only once. Its latest record determines Ongoing/Complete.
+  const byCustomer=new Map();
+  state.maintenance.slice().sort((a,b)=>b.date.localeCompare(a.date)).forEach(m=>{
+    const key=(m.customer||'').trim().toLowerCase();
+    if(!key) return;
+    if(!byCustomer.has(key)) byCustomer.set(key,{customer:m.customer,latest:m,records:[]});
+    byCustomer.get(key).records.push(m);
+  });
+
+  const clients=Array.from(byCustomer.values()).sort((a,b)=>{
+    return b.latest.date.localeCompare(a.latest.date) || a.customer.localeCompare(b.customer);
+  });
+
+  const makeItem=entry=>{
+    const m=entry.latest;
     const statusClass=m.status==='Complete'?'complete':'ongoing';
+    const li=document.createElement('li');
+    li.className='maintenance-item'+(activeMaintenanceCustomer===entry.customer?' active':'');
+    li.dataset.maintenanceCustomer=entry.customer;
     li.innerHTML=`
       <span class="project-status-dot ${statusClass}"></span>
       <span class="maintenance-item-main">
-        <span class="maintenance-item-name">${escapeHtml(m.customer||'Maintenance')}</span>
-        <span class="maintenance-item-date">${formatDateShort(m.date)}</span>
+        <span class="maintenance-item-name">${escapeHtml(entry.customer)}</span>
+        <span class="maintenance-item-date">${entry.records.length} catatan • terakhir ${formatDateShort(m.date)}</span>
       </span>
       <span class="project-status-badge ${statusClass}">${escapeHtml(m.status||'Ongoing')}</span>
-      <button class="del-btn" title="Hapus maintenance">✕</button>
     `;
 
-    li.querySelector('.maintenance-item-main').addEventListener('click',()=>{
-      activeMaintenanceId=m.id;
+    li.addEventListener('click',()=>{
+      activeMaintenanceCustomer=entry.customer;
+      activeMaintenanceId=null;
+      resetMaintenanceForm({preserveCustomer:true});
       activatePanel('maintenance');
-      startEditMaintenance(m);
-      renderMaintenanceSidebar();
-    });
-
-    li.querySelector('.project-status-dot').addEventListener('click',()=>{
-      activeMaintenanceId=m.id;
-      activatePanel('maintenance');
-      startEditMaintenance(m);
-      renderMaintenanceSidebar();
-    });
-
-    li.querySelector('.project-status-badge').addEventListener('click',()=>{
-      activeMaintenanceId=m.id;
-      activatePanel('maintenance');
-      startEditMaintenance(m);
-      renderMaintenanceSidebar();
-    });
-
-    li.querySelector('.del-btn').addEventListener('click',e=>{
-      e.stopPropagation();
-      deleteMaintenance(m);
+      renderAll();
+      window.scrollTo({top:0,behavior:'smooth'});
     });
     return li;
   };
 
-  const ongoingItems=state.maintenance.filter(m=>m.status!=='Complete').sort((a,b)=>b.date.localeCompare(a.date));
-  const completeItems=state.maintenance.filter(m=>m.status==='Complete').sort((a,b)=>b.date.localeCompare(a.date));
+  clients.filter(x=>x.latest.status!=='Complete').forEach(x=>ongoing.appendChild(makeItem(x)));
+  clients.filter(x=>x.latest.status==='Complete').forEach(x=>complete.appendChild(makeItem(x)));
 
-  ongoingItems.forEach(m=>ongoing.appendChild(makeItem(m)));
-  completeItems.forEach(m=>complete.appendChild(makeItem(m)));
-
-  document.getElementById('ongoingMaintenanceCount').textContent=ongoingItems.length;
-  document.getElementById('completeMaintenanceCount').textContent=completeItems.length;
+  document.getElementById('ongoingMaintenanceCount').textContent=clients.filter(x=>x.latest.status!=='Complete').length;
+  document.getElementById('completeMaintenanceCount').textContent=clients.filter(x=>x.latest.status==='Complete').length;
 }
 
 function renderProjectList(){
@@ -1381,7 +1384,20 @@ function renderTitleBlock(){
       bits.push(`<span>Status: <b>${escapeHtml(proj.status||'Ongoing')}</b></span>`);
     }
   }else if(currentSection==='input') title=proj ? 'Biaya Proyek — '+proj.name : 'Biaya Proyek';
-  else if(currentSection==='maintenance') title='Maintenance Dashboard';
+  else if(currentSection==='maintenance'){
+    const selectedCustomer=(activeMaintenanceCustomer||'').trim();
+    if(selectedCustomer){
+      const records=state.maintenance.filter(m=>m.customer===selectedCustomer);
+      const latest=records.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
+      title='Maintenance — '+selectedCustomer;
+      bits.push(`<span>Client: <b>${escapeHtml(selectedCustomer)}</b></span>`);
+      bits.push(`<span>${records.length} catatan bulanan</span>`);
+      if(latest) bits.push(`<span>Status: <b>${escapeHtml(latest.status||'Ongoing')}</b></span>`);
+    }else{
+      title='Maintenance Dashboard';
+      bits.push(`<span>Semua client maintenance</span>`);
+    }
+  }
   else if(currentSection==='pengeluaran') title='Expenses General';
   else if(currentSection==='pettycash') title='Petty Cash General';
   else if(currentSection==='inventory') title='Inventory General';
@@ -2310,45 +2326,90 @@ function updateMaintenanceCalc(){
 }
 
 function renderMaintenance(){
-  const list=getMaintenanceFiltered();
+  const month=document.getElementById('mntfilter-month').value;
+  const paymentStatus=document.getElementById('mntfilter-status').value;
+  const selectedCustomer=(activeMaintenanceCustomer||'').trim();
+
+  const context=document.getElementById('mntClientContext');
+  const formTitle=document.getElementById('mntFormTitle');
+  if(context){
+    if(selectedCustomer){
+      context.innerHTML=`<strong>${escapeHtml(selectedCustomer)}</strong> — riwayat maintenance client ini. Gunakan filter Bulan untuk melihat monthly record tertentu.`;
+    }else{
+      context.innerHTML='<strong>Semua client</strong> — pilih client dari sidebar kiri untuk melihat riwayat maintenance per client.';
+    }
+  }
+  if(formTitle){
+    formTitle.textContent=selectedCustomer?('Catat Maintenance — '+selectedCustomer):'Catat Maintenance';
+  }
+
+  let list=state.maintenance.filter(m=>{
+    if(selectedCustomer && m.customer!==selectedCustomer) return false;
+    if(month && m.date.slice(0,7)!==month) return false;
+    if(paymentStatus && m.customerStatus!==paymentStatus) return false;
+    return true;
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+
+  // KPI follows the selected client and month. With no client selected, it is a global dashboard.
   const revenue=list.reduce((s,m)=>s+m.service+m.chemicalSell,0);
   const vendorCost=list.reduce((s,m)=>s+m.vendorCost,0);
   const laborCost=list.reduce((s,m)=>s+m.laborCost,0);
   const profit=revenue-vendorCost-laborCost;
   const margin=revenue?profit/revenue*100:0;
-  const revenueAll=state.maintenance.reduce((s,m)=>s+m.service+m.chemicalSell,0);
-  const vendorAll=state.maintenance.reduce((s,m)=>s+m.vendorCost,0);
-  const laborAll=state.maintenance.reduce((s,m)=>s+m.laborCost,0);
-  const profitAll=revenueAll-vendorAll-laborAll;
-  document.getElementById('mnt-revenue').textContent=rupiah(revenueAll);
-  document.getElementById('mnt-vendor-cost').textContent=rupiah(vendorAll);
-  document.getElementById('mnt-profit').textContent=rupiah(profitAll);
-  document.getElementById('mnt-profit').className='value '+(profitAll<0?'warn':'ok');
-  document.getElementById('mnt-margin').textContent=(revenueAll?profitAll/revenueAll*100:0).toFixed(1)+'%';
-  document.getElementById('mnt-paid-count').textContent=state.maintenance.filter(m=>m.customerStatus==='Lunas').length;
-  document.getElementById('mnt-outstanding').textContent=rupiah(state.maintenance.filter(m=>m.customerStatus!=='Lunas').reduce((s,m)=>s+m.service+m.chemicalSell,0));
-  document.getElementById('mnt-markup').textContent=rupiah(state.maintenance.reduce((s,m)=>s+m.chemicalSell-m.vendorCost,0));
-  document.getElementById('mnt-avg-profit').textContent=rupiah(state.maintenance.length?profitAll/state.maintenance.length:0);
 
-  const body=document.getElementById('maintenanceTableBody'); body.innerHTML='';
+  document.getElementById('mnt-revenue').textContent=rupiah(revenue);
+  document.getElementById('mnt-vendor-cost').textContent=rupiah(vendorCost);
+  document.getElementById('mnt-profit').textContent=rupiah(profit);
+  document.getElementById('mnt-profit').className='value '+(profit<0?'warn':'ok');
+  document.getElementById('mnt-margin').textContent=margin.toFixed(1)+'%';
+
+  document.getElementById('mnt-paid-count').textContent=list.filter(m=>m.customerStatus==='Lunas').length;
+  document.getElementById('mnt-outstanding').textContent=rupiah(
+    list.filter(m=>m.customerStatus!=='Lunas').reduce((s,m)=>s+m.service+m.chemicalSell,0)
+  );
+  document.getElementById('mnt-markup').textContent=rupiah(
+    list.reduce((s,m)=>s+m.chemicalSell-m.vendorCost,0)
+  );
+  document.getElementById('mnt-avg-profit').textContent=rupiah(list.length?profit/list.length:0);
+
+  const body=document.getElementById('maintenanceTableBody');
+  body.innerHTML='';
   document.getElementById('maintenanceEmptyMsg').style.display=list.length?'none':'block';
+
   list.forEach(m=>{
-    const total=m.service+m.chemicalSell, p=total-m.vendorCost-m.laborCost;
+    const total=m.service+m.chemicalSell;
+    const p=total-m.vendorCost-m.laborCost;
     const tr=document.createElement('tr');
     const bc=m.customerStatus==='Lunas'?'lunas':(m.customerStatus==='DP'?'dp':'belum');
     const sc=m.status==='Complete'?'complete':'ongoing';
-    tr.innerHTML=`<td>${formatDateShort(m.date)}</td><td>${escapeHtml(m.customer)}</td><td class="amount">${rupiah(m.service)}</td><td class="amount">${rupiah(m.chemicalSell)}</td><td>${escapeHtml(m.vendor||'-')}</td><td class="amount">${rupiah(m.vendorCost)}</td><td class="amount">${rupiah(total)}</td><td class="amount ${p<0?'diff-neg':'diff-pos'}">${rupiah(p)}</td><td><span class="badge ${sc}">${escapeHtml(m.status)}</span></td><td class="row-actions"><button class="icon-btn" data-a="edit" title="Edit">✎</button><button class="icon-btn" data-a="del" title="Hapus">✕</button></td>`;
+    tr.innerHTML=`
+      <td>${formatDateShort(m.date)}</td>
+      <td>${escapeHtml(m.customer)}</td>
+      <td class="amount">${rupiah(m.service)}</td>
+      <td class="amount">${rupiah(m.chemicalSell)}</td>
+      <td>${escapeHtml(m.vendor||'-')}</td>
+      <td class="amount">${rupiah(m.vendorCost)}</td>
+      <td class="amount">${rupiah(total)}</td>
+      <td class="amount ${p<0?'diff-neg':'diff-pos'}">${rupiah(p)}</td>
+      <td><span class="badge ${sc}">${escapeHtml(m.status)}</span></td>
+      <td class="row-actions">
+        <button class="icon-btn" data-a="edit" title="Edit">✎</button>
+        <button class="icon-btn" data-a="del" title="Hapus">✕</button>
+      </td>`;
     tr.querySelector('[data-a="edit"]').addEventListener('click',()=>startEditMaintenance(m));
     tr.querySelector('[data-a="del"]').addEventListener('click',()=>deleteMaintenance(m));
     body.appendChild(tr);
   });
 }
 
-function resetMaintenanceForm(){
+function resetMaintenanceForm(options={}){
+  const preserveCustomer=!!options.preserveCustomer;
+  const selectedCustomer=activeMaintenanceCustomer||'';
+
   window.editingMaintenanceId=null;
   activeMaintenanceId=null;
   document.getElementById('mnt-date').value=todayISO();
-  document.getElementById('mnt-customer').value='';
+  document.getElementById('mnt-customer').value=preserveCustomer?selectedCustomer:'';
   document.getElementById('mnt-status').value='Ongoing';
   document.getElementById('mnt-service').value='';
   document.getElementById('mnt-chemical').value='';
@@ -2365,6 +2426,7 @@ function resetMaintenanceForm(){
 function startEditMaintenance(m){
   window.editingMaintenanceId=m.id;
   activeMaintenanceId=m.id;
+  activeMaintenanceCustomer=m.customer;
   document.getElementById('mnt-date').value=m.date;
   document.getElementById('mnt-customer').value=m.customer;
   document.getElementById('mnt-status').value=m.status||'Ongoing';
@@ -2411,6 +2473,7 @@ async function handleSaveMaintenance(){
   }
   if(error){console.error(error);showToast('Gagal menyimpan maintenance.');return;}
   activeMaintenanceId=maintenanceId;
+  activeMaintenanceCustomer=customer;
 
   // Simpan biaya vendor juga ke Expenses General agar pembayaran vendor masuk ke pengeluaran umum.
   const vendorMarker=`MAINTENANCE:${maintenanceId}`;
@@ -2430,7 +2493,7 @@ async function handleSaveMaintenance(){
   }
 
   const wasEdit=!!window.editingMaintenanceId;
-  resetMaintenanceForm(); await loadData(); renderAll(); showToast(wasEdit?'Maintenance diperbarui.':'Maintenance disimpan.');
+  resetMaintenanceForm({preserveCustomer:true}); await loadData(); renderAll(); showToast(wasEdit?'Maintenance diperbarui.':'Maintenance disimpan.');
 }
 
 function deleteMaintenance(m){
@@ -2439,7 +2502,13 @@ function deleteMaintenance(m){
     if(error){console.error(error);showToast('Gagal menghapus maintenance.');return;}
     const linked=state.expenses.find(x=>(x.note||'').startsWith(`MAINTENANCE:${m.id}`));
     if(linked) await sb.from('expenses').delete().eq('id',linked.id);
-    await loadData();renderAll();showToast('Data maintenance dihapus.');
+    await loadData();
+    if(activeMaintenanceCustomer && !state.maintenance.some(x=>x.customer===activeMaintenanceCustomer)){
+      activeMaintenanceCustomer=null;
+    }
+    activeMaintenanceId=null;
+    renderAll();
+    showToast('Data maintenance dihapus.');
   }});
 }
 
@@ -2991,7 +3060,8 @@ function setupAppEvents(){
   setupTabs();
   document.getElementById('addMaintenanceBtn').addEventListener('click',()=>{
     activeMaintenanceId=null;
-    resetMaintenanceForm();
+    resetMaintenanceForm({preserveCustomer:false});
+    activeMaintenanceCustomer=null;
     activatePanel('maintenance');
     renderMaintenanceSidebar();
     window.scrollTo({top:0,behavior:'smooth'});
