@@ -115,6 +115,21 @@
 .maintenance-add{display:block;width:calc(100% - 20px);margin:6px 10px 12px;padding:8px 10px;background:transparent;border:1px dashed rgba(255,255,255,.25);color:#eae5d8;text-align:left;cursor:pointer;font-size:11px;}
 .maintenance-add:hover{background:rgba(255,255,255,.05);}
 
+.maintenance-section-label{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;margin:18px 0 8px;color:var(--ink);}
+.chemical-box{border:1px solid var(--line);background:#faf8f2;padding:12px;margin-top:8px;}
+.chemical-table{width:100%;border-collapse:collapse;min-width:760px;}
+.chemical-table th,.chemical-table td{border-bottom:1px solid var(--line);padding:7px 6px;vertical-align:middle;font-size:11px;}
+.chemical-table th{font-weight:600;color:var(--muted);text-align:left;background:transparent;}
+.chemical-table input{width:100%;padding:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:11px;}
+.chemical-table .amount-input{width:130px;text-align:right;}
+.chemical-table .markup-cell{text-align:right;font-weight:700;white-space:nowrap;}
+.chemical-total-box{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+.chemical-total-box .mini-total{border:1px solid var(--line);background:#fff;padding:9px;}
+.chemical-total-box .mini-total .label{font-size:10px;color:var(--muted);margin-bottom:3px;}
+.chemical-total-box .mini-total strong{font-size:13px;}
+.maintenance-downloads{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;}
+@media(max-width:700px){.chemical-total-box{grid-template-columns:1fr;}}
+
   .status-select-row{display:flex;gap:8px;align-items:center;}
   .badge.ongoing{background:#fbeed8;color:#8a612b;}
   .badge.complete{background:#e2ede4;color:var(--ok);}
@@ -867,18 +882,49 @@
             <div><label for="mnt-date">Tanggal</label><input type="date" id="mnt-date"></div>
             <div><label for="mnt-customer">Customer</label><input type="text" id="mnt-customer" placeholder="mis. Villa ABC"></div>
             <div><label for="mnt-status">Status Maintenance</label><select id="mnt-status"><option>Ongoing</option><option>Complete</option></select></div>
-            <div><label for="mnt-service">Jasa Maintenance (Rp)</label><input type="number" id="mnt-service" min="0" placeholder="mis. 500000"></div>
-            <div><label for="mnt-chemical">Chemical ke Customer / Harga Jual (Rp)</label><input type="number" id="mnt-chemical" min="0" placeholder="mis. 750000"></div>
-            <div><label for="mnt-vendor-cost">Harga Chemical Vendor (Rp)</label><input type="number" id="mnt-vendor-cost" min="0" placeholder="mis. 500000"></div>
+            <div><label for="mnt-service">Jasa Maintenance (Rp)</label><input type="number" id="mnt-service" min="0" value="1000000" placeholder="1000000"></div>
             <div><label for="mnt-labor">Biaya Teknisi / Orang (Rp)</label><input type="number" id="mnt-labor" min="0" placeholder="opsional"></div>
-            <div><label for="mnt-vendor">Vendor Chemical</label><input type="text" id="mnt-vendor" placeholder="mis. Toko Chemical ABC"></div>
-            <div><label for="mnt-payment">Status Customer</label><select id="mnt-payment"><option>Lunas</option><option>Belum Lunas</option><option>DP</option></select></div>
-            <div><label for="mnt-vendor-payment">Status Vendor</label><select id="mnt-vendor-payment"><option>Lunas</option><option>Belum Lunas</option></select></div>
+            <div><label for="mnt-payment">Status Tagihan Customer</label><select id="mnt-payment"><option>Lunas</option><option>Belum Lunas</option><option>DP</option></select></div>
+          </div>
+
+          <div class="maintenance-section-label">🧴 Pembelian Chemical & Markup Customer</div>
+          <p class="hint" style="margin-top:0;">Chemical dicatat sebagai pembelian dari vendor (default: Pak Umar). Harga jual di kolom kanan adalah harga yang ditagihkan ke customer setelah markup. Kamu bisa memasukkan lebih dari satu chemical dalam satu bulan.</p>
+          <div class="chemical-box">
+            <div style="overflow-x:auto;">
+              <table class="chemical-table">
+                <thead>
+                  <tr>
+                    <th style="width:22%;">Chemical</th>
+                    <th style="width:17%;">Vendor</th>
+                    <th style="width:16%;text-align:right;">Harga Beli</th>
+                    <th style="width:16%;text-align:right;">Harga Jual Customer</th>
+                    <th style="width:16%;text-align:right;">Markup</th>
+                    <th style="width:7%;"></th>
+                  </tr>
+                </thead>
+                <tbody id="chemicalPurchaseBody"></tbody>
+              </table>
+            </div>
+            <div style="margin-top:9px;">
+              <button type="button" class="btn secondary small" id="addChemicalRowBtn">+ Tambah Chemical</button>
+            </div>
+            <div class="chemical-total-box">
+              <div class="mini-total"><div class="label">Total Pengeluaran Chemical</div><strong id="mnt-chemical-purchase-total">Rp 0</strong></div>
+              <div class="mini-total"><div class="label">Total Chemical Ditagihkan</div><strong id="mnt-chemical-sales-total">Rp 0</strong></div>
+              <div class="mini-total"><div class="label">Total Markup Chemical</div><strong class="profit" id="mnt-chemical-markup-total">Rp 0</strong></div>
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-top:12px;">
+            <div><label for="mnt-vendor-payment">Status Pembayaran Vendor</label><select id="mnt-vendor-payment"><option>Lunas</option><option>Belum Lunas</option></select></div>
             <div class="full"><label for="mnt-note">Catatan</label><textarea id="mnt-note" placeholder="Catatan maintenance, jadwal, chemical, dll."></textarea></div>
           </div>
+
           <div class="calc-box">
-            <div class="calc-row"><span>Tagihan customer</span><strong id="mnt-customer-total">Rp 0</strong></div>
-            <div class="calc-row"><span>Biaya vendor chemical</span><strong id="mnt-vendor-total">Rp 0</strong></div>
+            <div class="calc-row"><span>Jasa maintenance</span><strong id="mnt-service-total">Rp 0</strong></div>
+            <div class="calc-row"><span>Total chemical ditagihkan ke customer</span><strong id="mnt-customer-total">Rp 0</strong></div>
+            <div class="calc-row"><span><b>Total Tagihan Customer</b></span><strong id="mnt-customer-invoice-total">Rp 0</strong></div>
+            <div class="calc-row"><span>Total pengeluaran chemical</span><strong id="mnt-vendor-total">Rp 0</strong></div>
             <div class="calc-row"><span>Biaya teknisi / orang</span><strong id="mnt-labor-total">Rp 0</strong></div>
             <div class="calc-row total"><span>Profit maintenance</span><strong class="profit" id="mnt-live-profit">Rp 0</strong></div>
           </div>
@@ -899,11 +945,15 @@
           </div>
           <div style="overflow-x:auto;">
             <table>
-              <thead><tr><th>Tanggal</th><th>Customer</th><th>Jasa</th><th>Chemical Jual</th><th>Vendor</th><th class="amount">Bayar Vendor</th><th class="amount">Tagihan</th><th class="amount">Profit</th><th>Status Maintenance</th><th></th></tr></thead>
+              <thead><tr><th>Tanggal</th><th>Customer</th><th class="amount">Jasa</th><th class="amount">Chemical Beli</th><th class="amount">Chemical Jual</th><th>Vendor</th><th class="amount">Pengeluaran Chemical</th><th class="amount">Total Tagihan</th><th class="amount">Profit</th><th>Status</th><th></th></tr></thead>
               <tbody id="maintenanceTableBody"></tbody>
             </table>
           </div>
           <div class="empty" id="maintenanceEmptyMsg" style="display:none;">Belum ada data maintenance.</div>
+          <div class="maintenance-downloads">
+            <button class="btn secondary small" id="exportMaintenanceExcel">⬇ Unduh Excel</button>
+            <button class="btn secondary small" id="exportMaintenancePdf">⬇ Unduh PDF</button>
+          </div>
         </div>
 
         <div class="card">
@@ -1221,7 +1271,25 @@ async function loadData(){
   // inside the existing `transactions` table, so no SQL migration is required.
   state.maintenance = state.transactions.filter(t=>t.vendor==='__MAINTENANCE__').map(t=>{
     let d={}; try{ d=JSON.parse(t.note||'{}'); }catch(e){}
-    return { id:t.id, date:t.date, customer:d.customer||t.description||'', status:d.status||'Ongoing', service:Number(d.service||0), chemicalSell:Number(d.chemicalSell||0), vendorCost:Number(d.vendorCost||0), laborCost:Number(d.laborCost||0), vendor:d.vendorName||'', customerStatus:t.status||'Lunas', vendorStatus:d.vendorStatus||'Lunas', note:d.note||'', raw:t };
+    const purchases=Array.isArray(d.chemicalPurchases)?d.chemicalPurchases.map(x=>({
+      name:x.name||'Chemical',
+      vendor:x.vendor||d.vendorName||'Pak Umar',
+      buy:Number(x.buy||0),
+      sell:Number(x.sell||0)
+    })):[];
+    const legacyPurchases=(!purchases.length && (Number(d.vendorCost||0)>0 || Number(d.chemicalSell||0))) ? [{
+      name:'Chemical',
+      vendor:d.vendorName||'Pak Umar',
+      buy:Number(d.vendorCost||0),
+      sell:Number(d.chemicalSell||0)
+    }] : [];
+    const chemicalPurchases=purchases.length?purchases:legacyPurchases;
+    const totalBuy=chemicalPurchases.reduce((s,x)=>s+Number(x.buy||0),0);
+    const totalSell=chemicalPurchases.reduce((s,x)=>s+Number(x.sell||0),0);
+    return { id:t.id, date:t.date, customer:d.customer||t.description||'', status:d.status||'Ongoing',
+      service:Number(d.service||0), chemicalSell:totalSell, vendorCost:totalBuy, laborCost:Number(d.laborCost||0),
+      vendor:d.vendorName||((chemicalPurchases[0]||{}).vendor)||'Pak Umar', customerStatus:t.status||'Lunas',
+      vendorStatus:d.vendorStatus||'Lunas', note:d.note||'', chemicalPurchases, raw:t };
   });
 
   state.projectPayments = state.transactions.filter(t=>t.vendor==='__PAYMENT__').map(t=>{
@@ -2312,15 +2380,69 @@ function getMaintenanceFiltered(){
   }).sort((a,b)=>b.date.localeCompare(a.date));
 }
 
+function getChemicalRowsFromForm(){
+  return Array.from(document.querySelectorAll('.chemical-row')).map(row=>({
+    name:row.querySelector('.chemical-name')?.value.trim()||'Chemical',
+    vendor:row.querySelector('.chemical-vendor')?.value.trim()||'Pak Umar',
+    buy:Number(row.querySelector('.chemical-buy')?.value)||0,
+    sell:Number(row.querySelector('.chemical-sell')?.value)||0
+  })).filter(x=>x.name || x.buy || x.sell);
+}
+function renderChemicalRows(rows){
+  const body=document.getElementById('chemicalPurchaseBody');
+  if(!body) return;
+  body.innerHTML='';
+  const list=(rows&&rows.length)?rows:[{name:'',vendor:'Pak Umar',buy:0,sell:0}];
+  list.forEach(r=>addChemicalRow(r));
+  updateMaintenanceCalc();
+}
+function addChemicalRow(data={}){
+  const body=document.getElementById('chemicalPurchaseBody');
+  if(!body) return;
+  const tr=document.createElement('tr');
+  tr.className='chemical-row';
+  tr.innerHTML=`
+    <td><input class="chemical-name" type="text" placeholder="mis. Chlorine" value="${escapeHtml(data.name||'')}"></td>
+    <td><input class="chemical-vendor" type="text" placeholder="Pak Umar" value="${escapeHtml(data.vendor||'Pak Umar')}"></td>
+    <td><input class="chemical-buy amount-input" type="number" min="0" placeholder="0" value="${data.buy||''}"></td>
+    <td><input class="chemical-sell amount-input" type="number" min="0" placeholder="0" value="${data.sell||''}"></td>
+    <td class="markup-cell">Rp 0</td>
+    <td><button type="button" class="icon-btn chemical-remove" title="Hapus">✕</button></td>`;
+  const update=()=>{ 
+    const buy=Number(tr.querySelector('.chemical-buy').value)||0;
+    const sell=Number(tr.querySelector('.chemical-sell').value)||0;
+    tr.querySelector('.markup-cell').textContent=rupiah(sell-buy);
+    updateMaintenanceCalc();
+  };
+  tr.querySelectorAll('input').forEach(el=>el.addEventListener('input',update));
+  tr.querySelector('.chemical-remove').addEventListener('click',()=>{
+    const rows=body.querySelectorAll('.chemical-row');
+    if(rows.length===1){
+      tr.querySelector('.chemical-name').value='';
+      tr.querySelector('.chemical-vendor').value='Pak Umar';
+      tr.querySelector('.chemical-buy').value='';
+      tr.querySelector('.chemical-sell').value='';
+    }else tr.remove();
+    updateMaintenanceCalc();
+  });
+  body.appendChild(tr);
+  update();
+}
 function updateMaintenanceCalc(){
   const service=Number(document.getElementById('mnt-service').value)||0;
-  const chemicalSell=Number(document.getElementById('mnt-chemical').value)||0;
-  const vendorCost=Number(document.getElementById('mnt-vendor-cost').value)||0;
   const laborCost=Number(document.getElementById('mnt-labor').value)||0;
-  const total=service+chemicalSell;
-  const profit=total-vendorCost-laborCost;
-  document.getElementById('mnt-customer-total').textContent=rupiah(total);
-  document.getElementById('mnt-vendor-total').textContent=rupiah(vendorCost);
+  const rows=getChemicalRowsFromForm();
+  const chemicalBuy=rows.reduce((s,x)=>s+x.buy,0);
+  const chemicalSell=rows.reduce((s,x)=>s+x.sell,0);
+  const customerTotal=service+chemicalSell;
+  const profit=customerTotal-chemicalBuy-laborCost;
+  document.getElementById('mnt-service-total').textContent=rupiah(service);
+  document.getElementById('mnt-chemical-purchase-total').textContent=rupiah(chemicalBuy);
+  document.getElementById('mnt-chemical-sales-total').textContent=rupiah(chemicalSell);
+  document.getElementById('mnt-chemical-markup-total').textContent=rupiah(chemicalSell-chemicalBuy);
+  document.getElementById('mnt-customer-total').textContent=rupiah(chemicalSell);
+  document.getElementById('mnt-customer-invoice-total').textContent=rupiah(customerTotal);
+  document.getElementById('mnt-vendor-total').textContent=rupiah(chemicalBuy);
   document.getElementById('mnt-labor-total').textContent=rupiah(laborCost);
   const p=document.getElementById('mnt-live-profit'); p.textContent=rupiah(profit); p.className=profit<0?'loss':'profit';
 }
@@ -2329,19 +2451,14 @@ function renderMaintenance(){
   const month=document.getElementById('mntfilter-month').value;
   const paymentStatus=document.getElementById('mntfilter-status').value;
   const selectedCustomer=(activeMaintenanceCustomer||'').trim();
-
   const context=document.getElementById('mntClientContext');
   const formTitle=document.getElementById('mntFormTitle');
+
   if(context){
-    if(selectedCustomer){
-      context.innerHTML=`<strong>${escapeHtml(selectedCustomer)}</strong> — riwayat maintenance client ini. Gunakan filter Bulan untuk melihat monthly record tertentu.`;
-    }else{
-      context.innerHTML='<strong>Semua client</strong> — pilih client dari sidebar kiri untuk melihat riwayat maintenance per client.';
-    }
+    if(selectedCustomer) context.innerHTML=`<strong>${escapeHtml(selectedCustomer)}</strong> — riwayat maintenance bulanan.`;
+    else context.innerHTML='<strong>Semua client</strong> — pilih client di sidebar untuk melihat riwayat bulanan.';
   }
-  if(formTitle){
-    formTitle.textContent=selectedCustomer?('Catat Maintenance — '+selectedCustomer):'Catat Maintenance';
-  }
+  if(formTitle) formTitle.textContent=selectedCustomer?('Catat Maintenance — '+selectedCustomer):'Catat Maintenance';
 
   let list=state.maintenance.filter(m=>{
     if(selectedCustomer && m.customer!==selectedCustomer) return false;
@@ -2350,44 +2467,38 @@ function renderMaintenance(){
     return true;
   }).sort((a,b)=>b.date.localeCompare(a.date));
 
-  // KPI follows the selected client and month. With no client selected, it is a global dashboard.
   const revenue=list.reduce((s,m)=>s+m.service+m.chemicalSell,0);
-  const vendorCost=list.reduce((s,m)=>s+m.vendorCost,0);
+  const chemicalBuy=list.reduce((s,m)=>s+m.vendorCost,0);
   const laborCost=list.reduce((s,m)=>s+m.laborCost,0);
-  const profit=revenue-vendorCost-laborCost;
+  const profit=revenue-chemicalBuy-laborCost;
   const margin=revenue?profit/revenue*100:0;
 
   document.getElementById('mnt-revenue').textContent=rupiah(revenue);
-  document.getElementById('mnt-vendor-cost').textContent=rupiah(vendorCost);
+  document.getElementById('mnt-vendor-cost').textContent=rupiah(chemicalBuy);
   document.getElementById('mnt-profit').textContent=rupiah(profit);
   document.getElementById('mnt-profit').className='value '+(profit<0?'warn':'ok');
   document.getElementById('mnt-margin').textContent=margin.toFixed(1)+'%';
-
   document.getElementById('mnt-paid-count').textContent=list.filter(m=>m.customerStatus==='Lunas').length;
-  document.getElementById('mnt-outstanding').textContent=rupiah(
-    list.filter(m=>m.customerStatus!=='Lunas').reduce((s,m)=>s+m.service+m.chemicalSell,0)
-  );
-  document.getElementById('mnt-markup').textContent=rupiah(
-    list.reduce((s,m)=>s+m.chemicalSell-m.vendorCost,0)
-  );
+  document.getElementById('mnt-outstanding').textContent=rupiah(list.filter(m=>m.customerStatus!=='Lunas').reduce((s,m)=>s+m.service+m.chemicalSell,0));
+  document.getElementById('mnt-markup').textContent=rupiah(list.reduce((s,m)=>s+m.chemicalSell-m.vendorCost,0));
   document.getElementById('mnt-avg-profit').textContent=rupiah(list.length?profit/list.length:0);
 
   const body=document.getElementById('maintenanceTableBody');
   body.innerHTML='';
   document.getElementById('maintenanceEmptyMsg').style.display=list.length?'none':'block';
-
   list.forEach(m=>{
     const total=m.service+m.chemicalSell;
     const p=total-m.vendorCost-m.laborCost;
+    const vendors=[...new Set((m.chemicalPurchases||[]).map(x=>x.vendor).filter(Boolean))].join(', ')||m.vendor||'-';
     const tr=document.createElement('tr');
-    const bc=m.customerStatus==='Lunas'?'lunas':(m.customerStatus==='DP'?'dp':'belum');
     const sc=m.status==='Complete'?'complete':'ongoing';
     tr.innerHTML=`
       <td>${formatDateShort(m.date)}</td>
       <td>${escapeHtml(m.customer)}</td>
       <td class="amount">${rupiah(m.service)}</td>
+      <td class="amount">${rupiah(m.vendorCost)}</td>
       <td class="amount">${rupiah(m.chemicalSell)}</td>
-      <td>${escapeHtml(m.vendor||'-')}</td>
+      <td>${escapeHtml(vendors)}</td>
       <td class="amount">${rupiah(m.vendorCost)}</td>
       <td class="amount">${rupiah(total)}</td>
       <td class="amount ${p<0?'diff-neg':'diff-pos'}">${rupiah(p)}</td>
@@ -2405,24 +2516,19 @@ function renderMaintenance(){
 function resetMaintenanceForm(options={}){
   const preserveCustomer=!!options.preserveCustomer;
   const selectedCustomer=activeMaintenanceCustomer||'';
-
   window.editingMaintenanceId=null;
   activeMaintenanceId=null;
   document.getElementById('mnt-date').value=todayISO();
   document.getElementById('mnt-customer').value=preserveCustomer?selectedCustomer:'';
   document.getElementById('mnt-status').value='Ongoing';
-  document.getElementById('mnt-service').value='';
-  document.getElementById('mnt-chemical').value='';
-  document.getElementById('mnt-vendor-cost').value='';
+  document.getElementById('mnt-service').value='1000000';
   document.getElementById('mnt-labor').value='';
-  document.getElementById('mnt-vendor').value='';
   document.getElementById('mnt-payment').value='Lunas';
   document.getElementById('mnt-vendor-payment').value='Lunas';
   document.getElementById('mnt-note').value='';
   document.getElementById('cancelMaintenanceEditBtn').style.display='none';
-  updateMaintenanceCalc();
+  renderChemicalRows([{name:'',vendor:'Pak Umar',buy:0,sell:0}]);
 }
-
 function startEditMaintenance(m){
   window.editingMaintenanceId=m.id;
   activeMaintenanceId=m.id;
@@ -2431,13 +2537,11 @@ function startEditMaintenance(m){
   document.getElementById('mnt-customer').value=m.customer;
   document.getElementById('mnt-status').value=m.status||'Ongoing';
   document.getElementById('mnt-service').value=m.service;
-  document.getElementById('mnt-chemical').value=m.chemicalSell;
-  document.getElementById('mnt-vendor-cost').value=m.vendorCost;
   document.getElementById('mnt-labor').value=m.laborCost||0;
-  document.getElementById('mnt-vendor').value=m.vendor;
   document.getElementById('mnt-payment').value=m.customerStatus;
   document.getElementById('mnt-vendor-payment').value=m.vendorStatus;
   document.getElementById('mnt-note').value=m.note||'';
+  renderChemicalRows(m.chemicalPurchases||[{name:'Chemical',vendor:m.vendor||'Pak Umar',buy:m.vendorCost||0,sell:m.chemicalSell||0}]);
   document.getElementById('cancelMaintenanceEditBtn').style.display='inline-block';
   activatePanel('maintenance'); updateMaintenanceCalc();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -2447,19 +2551,26 @@ async function handleSaveMaintenance(){
   const customer=document.getElementById('mnt-customer').value.trim();
   const date=document.getElementById('mnt-date').value||todayISO();
   const service=Number(document.getElementById('mnt-service').value)||0;
-  const chemicalSell=Number(document.getElementById('mnt-chemical').value)||0;
-  const vendorCost=Number(document.getElementById('mnt-vendor-cost').value)||0;
   const laborCost=Number(document.getElementById('mnt-labor').value)||0;
-  const vendorName=document.getElementById('mnt-vendor').value.trim();
+  const chemicalPurchases=getChemicalRowsFromForm().filter(x=>x.buy>0 || x.sell>0 || x.name);
+  const vendorCost=chemicalPurchases.reduce((s,x)=>s+Number(x.buy||0),0);
+  const chemicalSell=chemicalPurchases.reduce((s,x)=>s+Number(x.sell||0),0);
+  const vendorName=(chemicalPurchases.find(x=>x.vendor)?.vendor)||'Pak Umar';
   if(!customer){showToast('Customer wajib diisi.');return;}
-  if(service<=0 && chemicalSell<=0){showToast('Isi minimal jasa atau chemical yang ditagihkan.');return;}
-  if(vendorCost<0){showToast('Biaya vendor tidak valid.');return;}
+  if(service<=0 && chemicalSell<=0){showToast('Isi jasa maintenance atau chemical yang ditagihkan.');return;}
   const customerStatus=document.getElementById('mnt-payment').value;
   const vendorStatus=document.getElementById('mnt-vendor-payment').value;
   const maintenanceStatus=document.getElementById('mnt-status').value;
   const noteText=document.getElementById('mnt-note').value.trim();
-  const noteObj={customer,status:maintenanceStatus,service,chemicalSell,vendorCost,laborCost,vendorName,vendorStatus,note:noteText};
-  const row={user_id:currentUser.id,project_id:null,date,category:'__MAINTENANCE__',vendor:'__MAINTENANCE__',amount:service+chemicalSell,description:customer,status:customerStatus,ref:'MAINTENANCE',note:JSON.stringify(noteObj)};
+  const noteObj={
+    customer,status:maintenanceStatus,service,chemicalSell,vendorCost,laborCost,
+    vendorName,vendorStatus,note:noteText,chemicalPurchases
+  };
+  const row={
+    user_id:currentUser.id,project_id:null,date,category:'__MAINTENANCE__',
+    vendor:'__MAINTENANCE__',amount:service+chemicalSell,description:customer,
+    status:customerStatus,ref:'MAINTENANCE',note:JSON.stringify(noteObj)
+  };
   let error, maintenanceId=window.editingMaintenanceId||null;
   if(maintenanceId){
     ({error}=await sb.from('transactions').update(row).eq('id',maintenanceId));
@@ -2469,31 +2580,129 @@ async function handleSaveMaintenance(){
   }
   if(error && /project_id|not-null|null value/i.test(error.message||'')){
     const gid=await ensureGeneralProject();
-    if(gid){ row.project_id=gid; if(maintenanceId) ({error}=await sb.from('transactions').update(row).eq('id',maintenanceId)); else {const ins=await sb.from('transactions').insert(row).select().single();error=ins.error;if(!error)maintenanceId=ins.data.id;}} 
+    if(gid){
+      row.project_id=gid;
+      if(maintenanceId) ({error}=await sb.from('transactions').update(row).eq('id',maintenanceId));
+      else {const ins=await sb.from('transactions').insert(row).select().single();error=ins.error;if(!error)maintenanceId=ins.data.id;}
+    }
   }
   if(error){console.error(error);showToast('Gagal menyimpan maintenance.');return;}
   activeMaintenanceId=maintenanceId;
   activeMaintenanceCustomer=customer;
 
-  // Simpan biaya vendor juga ke Expenses General agar pembayaran vendor masuk ke pengeluaran umum.
+  // Total pembelian chemical dicatat sebagai Expenses General.
   const vendorMarker=`MAINTENANCE:${maintenanceId}`;
   const existingExpense=state.expenses.find(x=>(x.note||'').startsWith(vendorMarker));
   if(vendorCost>0){
-    const expenseRow={project_id:null,user_id:currentUser.id,date,category:'Maintenance Vendor',description:`Chemical untuk ${customer}`,party:vendorName,amount:vendorCost,status:vendorStatus,note:`${vendorMarker}${noteText?' | '+noteText:''}`};
+    const expenseRow={
+      project_id:null,user_id:currentUser.id,date,category:'Maintenance Vendor',
+      description:`Pembelian chemical untuk ${customer}`,party:vendorName,amount:vendorCost,
+      status:vendorStatus,note:`${vendorMarker}${noteText?' | '+noteText:''}`
+    };
     let exErr;
     if(existingExpense) ({error:exErr}=await sb.from('expenses').update(expenseRow).eq('id',existingExpense.id));
     else ({error:exErr}=await sb.from('expenses').insert(expenseRow));
     if(exErr && /project_id|not-null|null value/i.test(exErr.message||'')){
       const gid=await ensureGeneralProject();
-      if(gid){expenseRow.project_id=gid;if(existingExpense)({error:exErr}=await sb.from('expenses').update(expenseRow).eq('id',existingExpense.id));else({error:exErr}=await sb.from('expenses').insert(expenseRow));}
+      if(gid){
+        expenseRow.project_id=gid;
+        if(existingExpense)({error:exErr}=await sb.from('expenses').update(expenseRow).eq('id',existingExpense.id));
+        else({error:exErr}=await sb.from('expenses').insert(expenseRow));
+      }
     }
-    if(exErr){console.error(exErr);showToast('Maintenance tersimpan, tetapi biaya vendor gagal masuk Expenses General.');}
+    if(exErr){console.error(exErr);showToast('Maintenance tersimpan, tetapi pembelian chemical gagal masuk Expenses General.');}
   }else if(existingExpense){
     await sb.from('expenses').delete().eq('id',existingExpense.id);
   }
 
   const wasEdit=!!window.editingMaintenanceId;
-  resetMaintenanceForm({preserveCustomer:true}); await loadData(); renderAll(); showToast(wasEdit?'Maintenance diperbarui.':'Maintenance disimpan.');
+  resetMaintenanceForm({preserveCustomer:true});
+  await loadData(); renderAll();
+  showToast(wasEdit?'Maintenance diperbarui.':'Maintenance disimpan.');
+}
+
+function getMaintenanceExportData(){
+  const month=document.getElementById('mntfilter-month')?.value||'';
+  const paymentStatus=document.getElementById('mntfilter-status')?.value||'';
+  const customer=(activeMaintenanceCustomer||'').trim();
+  const list=state.maintenance.filter(m=>{
+    if(customer && m.customer!==customer) return false;
+    if(month && m.date.slice(0,7)!==month) return false;
+    if(paymentStatus && m.customerStatus!==paymentStatus) return false;
+    return true;
+  }).sort((a,b)=>a.date.localeCompare(b.date));
+  const detail=[];
+  list.forEach(m=>{
+    const purchases=(m.chemicalPurchases&&m.chemicalPurchases.length)?m.chemicalPurchases:[{name:'Chemical',vendor:m.vendor||'Pak Umar',buy:m.vendorCost||0,sell:m.chemicalSell||0}];
+    purchases.forEach(c=>detail.push({
+      Tanggal:m.date, Customer:m.customer, 'Jasa Maintenance':m.service,
+      Chemical:c.name, Vendor:c.vendor, 'Harga Beli Chemical':c.buy,
+      'Harga Jual Customer':c.sell, Markup:c.sell-c.buy,
+      'Status Vendor':m.vendorStatus, 'Status Customer':m.customerStatus,
+      'Catatan':m.note||''
+    }));
+  });
+  const revenue=list.reduce((s,m)=>s+m.service+m.chemicalSell,0);
+  const chemicalBuy=list.reduce((s,m)=>s+m.vendorCost,0);
+  const labor=list.reduce((s,m)=>s+m.laborCost,0);
+  const profit=revenue-chemicalBuy-labor;
+  return {list,detail,customer,month,revenue,chemicalBuy,labor,profit};
+}
+function exportMaintenanceExcel(){
+  const d=getMaintenanceExportData();
+  if(!d.list.length){showToast('Belum ada data maintenance untuk diunduh.');return;}
+  const wb=XLSX.utils.book_new();
+  const summary=[{
+    Client:d.customer||'Semua Client',
+    Periode:d.month?formatMonthLabel(d.month):'Semua Periode',
+    'Total Jasa':d.list.reduce((s,m)=>s+m.service,0),
+    'Total Pengeluaran Chemical':d.chemicalBuy,
+    'Total Chemical Ditagihkan':d.list.reduce((s,m)=>s+m.chemicalSell,0),
+    'Total Tagihan Customer':d.revenue,
+    'Biaya Teknisi':d.labor,
+    'Profit Maintenance':d.profit
+  }];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),'Summary');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d.detail),'Detail Chemical');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d.list.map(m=>({
+    Tanggal:m.date,Customer:m.customer,Jasa:m.service,'Chemical Beli':m.vendorCost,
+    'Chemical Jual':m.chemicalSell,'Pengeluaran Chemical':m.vendorCost,
+    'Total Tagihan':m.service+m.chemicalSell,'Profit':m.service+m.chemicalSell-m.vendorCost-m.laborCost,
+    'Status Maintenance':m.status,'Status Customer':m.customerStatus,'Status Vendor':m.vendorStatus,Catatan:m.note||''
+  }))),'Maintenance');
+  XLSX.writeFile(wb,`maintenance-${(d.customer||'semua-client').replace(/[^a-z0-9]+/gi,'-').toLowerCase()}${d.month?'-'+d.month:''}.xlsx`);
+  showToast('Data maintenance berhasil diunduh sebagai Excel.');
+}
+function exportMaintenancePdf(){
+  const d=getMaintenanceExportData();
+  if(!d.list.length){showToast('Belum ada data maintenance untuk diunduh.');return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
+  const title='LAPORAN MAINTENANCE';
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.text(title,14,15);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);
+  doc.text(`Client: ${d.customer||'Semua Client'}`,14,21);
+  doc.text(`Periode: ${d.month?formatMonthLabel(d.month):'Semua Periode'}`,14,26);
+  doc.autoTable({
+    startY:32,
+    head:[['Tanggal','Customer','Jasa','Chemical Beli','Chemical Jual','Pengeluaran','Tagihan','Profit','Status']],
+    body:d.list.map(m=>[
+      formatDateShort(m.date),m.customer,rupiah(m.service),rupiah(m.vendorCost),rupiah(m.chemicalSell),
+      rupiah(m.vendorCost+m.laborCost),rupiah(m.service+m.chemicalSell),
+      rupiah(m.service+m.chemicalSell-m.vendorCost-m.laborCost),m.status
+    ]),
+    styles:{fontSize:7,cellPadding:2},headStyles:{fillColor:[28,75,77]},
+    columnStyles:{2:{halign:'right'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'right'},7:{halign:'right'}}
+  });
+  let y=doc.lastAutoTable.finalY+8;
+  doc.setFont('helvetica','bold');doc.setFontSize(10);
+  doc.text(`Total Jasa: ${rupiah(d.list.reduce((s,m)=>s+m.service,0))}`,14,y);
+  doc.text(`Pengeluaran Chemical: ${rupiah(d.chemicalBuy)}`,14,y+6);
+  doc.text(`Chemical Ditagihkan: ${rupiah(d.list.reduce((s,m)=>s+m.chemicalSell,0))}`,90,y);
+  doc.text(`Total Tagihan Customer: ${rupiah(d.revenue)}`,90,y+6);
+  doc.text(`Profit Maintenance: ${rupiah(d.profit)}`,190,y);
+  doc.save(`maintenance-${(d.customer||'semua-client').replace(/[^a-z0-9]+/gi,'-').toLowerCase()}${d.month?'-'+d.month:''}.pdf`);
+  showToast('Data maintenance berhasil diunduh sebagai PDF.');
 }
 
 function deleteMaintenance(m){
@@ -3103,8 +3312,11 @@ function setupAppEvents(){
   document.getElementById('saveProjectPaymentBtn').addEventListener('click', handleSaveProjectPayment);
 
   // maintenance
-  ['mnt-service','mnt-chemical','mnt-vendor-cost','mnt-labor'].forEach(id=>document.getElementById(id).addEventListener('input',updateMaintenanceCalc));
+  ['mnt-service','mnt-labor'].forEach(id=>document.getElementById(id).addEventListener('input',updateMaintenanceCalc));
+  document.getElementById('addChemicalRowBtn').addEventListener('click',()=>addChemicalRow({name:'',vendor:'Pak Umar',buy:0,sell:0}));
   document.getElementById('saveMaintenanceBtn').addEventListener('click',handleSaveMaintenance);
+  document.getElementById('exportMaintenanceExcel').addEventListener('click',exportMaintenanceExcel);
+  document.getElementById('exportMaintenancePdf').addEventListener('click',exportMaintenancePdf);
   document.getElementById('cancelMaintenanceEditBtn').addEventListener('click',resetMaintenanceForm);
   document.getElementById('mntfilter-month').addEventListener('change',renderMaintenance);
   document.getElementById('mntfilter-status').addEventListener('change',renderMaintenance);
